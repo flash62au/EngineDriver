@@ -561,6 +561,46 @@ public class PermissionsHelper {
         }
     }
 
+    // don't know why but the isDialogOpen variable can get stuck on true
+    // use this to initialise it
+    public void setIsDialogOpen(boolean isOpen) {
+        isDialogOpen = isOpen;
+    }
+
+    static public String getManifestPermissionId(@RequestCodes final int requestCode) {
+        switch (requestCode) {
+            case READ_IMAGES:
+                return Manifest.permission.READ_EXTERNAL_STORAGE;
+            case READ_PHONE_STATE:
+                return Manifest.permission.READ_PHONE_STATE;
+            case ACCESS_FINE_LOCATION:
+                return Manifest.permission.ACCESS_FINE_LOCATION;
+            case WRITE_SETTINGS:
+                return Manifest.permission.WRITE_SETTINGS;
+            case READ_MEDIA_IMAGES:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    return Manifest.permission.READ_MEDIA_IMAGES;
+                } else { return "";}
+            case READ_MEDIA_VISUAL_USER_SELECTED:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    return Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED;
+                } else { return "";}
+            case POST_NOTIFICATIONS:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    return Manifest.permission.POST_NOTIFICATIONS;
+                } else { return "";}
+            case ACCESS_COARSE_LOCATION:
+                return Manifest.permission.ACCESS_COARSE_LOCATION;
+            case ACCESS_WIFI_STATE:
+                return Manifest.permission.ACCESS_WIFI_STATE;
+            case INTERNET:
+                return Manifest.permission.INTERNET;
+            default:
+                return "";
+        }
+    }
+
+
     /**
      * Callback interface to be implemented by any calling Activity
      */
