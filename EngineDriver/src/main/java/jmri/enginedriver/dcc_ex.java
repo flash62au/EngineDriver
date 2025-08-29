@@ -106,14 +106,14 @@ public class dcc_ex extends AppCompatActivity {
     String[] dccexCommonCommandsEntriesArray; // display version
     int[] dccexCommonCommandsHasParametersArray; // display version
 
-//    private int dccexActionTypeIndex = 0;
+    //    private int dccexActionTypeIndex = 0;
     String[] dccexActionTypeEntryValuesArray;
     String[] dccexActionTypeEntriesArray; // display version
 
 //    private boolean dccexHideSends = false;
 
     private static final int PROGRAMMING_TRACK = 0;
-//    private static final int PROGRAMMING_ON_MAIN = 1;
+    //    private static final int PROGRAMMING_ON_MAIN = 1;
     private static final int TRACK_MANAGER = 2;
 
     Button readAddressButton;
@@ -131,7 +131,7 @@ public class dcc_ex extends AppCompatActivity {
     private LinearLayout dexcProgrammingCommonCvsLayout;
     private LinearLayout dexcProgrammingAddressLayout;
     private LinearLayout dexcProgrammingCvLayout;
-//    private final LinearLayout[] dexcDccexTracklayout = {null, null, null, null, null, null, null, null};
+    //    private final LinearLayout[] dexcDccexTracklayout = {null, null, null, null, null, null, null, null};
     private LinearLayout dexcDccexTrackLinearLayout;
     Spinner dccexCommonCvsSpinner;
     Spinner dccexCommonCommandsSpinner;
@@ -154,7 +154,7 @@ public class dcc_ex extends AppCompatActivity {
     static final int WHICH_COMMAND = 3;
 
     static final int TRACK_TYPE_OFF_NONE_INDEX = 0;
-//    static final int TRACK_TYPE_DCC_MAIN_INDEX = 1;
+    //    static final int TRACK_TYPE_DCC_MAIN_INDEX = 1;
     static final int TRACK_TYPE_DCC_PROG_INDEX = 2;
 //    static final int TRACK_TYPE_DC_INDEX = 3;
 //    static final int TRACK_TYPE_DCX_INDEX = 4;
@@ -251,9 +251,11 @@ public class dcc_ex extends AppCompatActivity {
                     break;
                 case message_type.RESTART_APP:
                 case message_type.RELAUNCH_APP:
-                case message_type.DISCONNECT:
                 case message_type.SHUTDOWN:
                     shutdown();
+                    break;
+                case message_type.DISCONNECT:
+                    disconnect();
                     break;
                 case message_type.RESPONSE:    //handle messages from WiThrottle server
                     String s = msg.obj.toString();
@@ -1011,6 +1013,7 @@ public class dcc_ex extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         threaded_application.activityResumed(activityName);
+        mainapp.removeNotification(this.getIntent());
 
         threaded_application.currentActivity = activity_id_type.DCC_EX;
         if (mainapp.isForcingFinish()) { //expedite
@@ -1059,7 +1062,18 @@ public class dcc_ex extends AppCompatActivity {
         mainapp.displayFlashlightMenuButton(menu);
         mainapp.setFlashlightActionViewButton(menu, findViewById(R.id.flashlight_button));
         mainapp.displayPowerStateMenuButton(menu);
-        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+//        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        if (findViewById(R.id.powerLayoutButton) == null) {
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+                }
+            }, 100);
+        } else {
+            mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        }
 
         adjustToolbarSize(menu);
 
@@ -1082,6 +1096,10 @@ public class dcc_ex extends AppCompatActivity {
         mainapp.dccexScreenIsOpen = false;
         this.finish();  //end this activity
         connection_activity.overridePendingTransition(this, R.anim.fade_in, R.anim.fade_out);
+    }
+
+    private void disconnect() {
+        this.finish();
     }
 
     private void shutdown() {
@@ -1145,7 +1163,7 @@ public class dcc_ex extends AppCompatActivity {
             mainapp.buttonVibration();
             return true;
         } else {
-                return super.onOptionsItemSelected(item);
+            return super.onOptionsItemSelected(item);
         }
     }
 

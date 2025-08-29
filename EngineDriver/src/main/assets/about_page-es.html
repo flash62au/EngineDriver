@@ -17,29 +17,10 @@
 </div>
 <p><b>Los cambios para esta versión incluye:</b></p>
 <ul>
-    <li>Mover a las bibliotecas de AndroidX</li>
-    <li>Soporte para ESU MC II/Pro</li>
-    <li>Se prefiere usar botones grandes en la barra de herramientas. El tamaño predeterminado es grande en pantallas de 17 cm o más.</li>
-    <li>Corrección de errores del acelerador semirrealista</li>
-    <li>Se cambiaron las advertencias de permisos de ubicación a un mensaje de notificación.</li>
-    <li>Se ha añadido una opción al icono de ED en la barra de acciones para volver a la pantalla de aceleración. Esta opción estará activada por defecto en las nuevas instalaciones.</li>
-    <li>Cambios en los temas Original, Colorido y Oscuro para que los botones sean más tridimensionales.</li>
-    <li>Se rediseñaron las pantallas Select Loco y DCC-EX para que se basen más en glifos.</li>
-    <li>Se reorganizó la página Seleccionar locomotora para que se ajuste mejor al texto que no está en inglés (principalmente alemán).</li>
-    <li>Nuevo comando 'G' para el tipo de gamepad del teclado para forzar una función incluso si es momentánea</li>
-    <li>Cuando cambia el diseño del acelerador y el nuevo diseño admite una variedad de aceleradores, Engine Driver le solicitará el número.</li>
-    <li>Enviar solicitudes de resincronización adicionales después de la reconexión de DCC-EX</li>
-    <li>DCC-EX Pref para secuenciar solicitudes de artículos</li>
-    <li>Corrección de errores para F0-F9 en algunos sistemas: se eliminó el cero inicial de la identificación de FKey al enviar</li>
-    <li>Corrección de errores del modo inmersivo</li>
-    <li>Limpieza de los diseños del acelerador horizontal. Corrección de algunos problemas de altura.</li>
-    <li>Solo vuelva a dibujar la lista de rutas si realmente se modificó</li>
-    <li>Corrección de errores para la opción de protocolo de conexión "Automático" en idiomas distintos del inglés</li>
-    <li>Advertencia independiente cuando el servicio "Usar ubicación" está deshabilitado (a diferencia de cuando no hay WiFi)</li>
-    <li>Correcciones y cambios en el Temporizador Infantil. Se añadió la opción de modo Quiosco.</li>
-    <li>Nueva preferencia para enviar un único EStop del acelerador al mantener presionado el botón de parada</li>
-    <li>Se agregó la capacidad de compartir los archivos de registro o cualquier archivo del almacenamiento privado de ED</li>
-    <li>Se agregó la capacidad de compartir cualquier archivo con el almacenamiento privado de ED</li>
+    <li>Última versión de Engine Driver compatible con Android 4.x</li>
+    <li>Corrección para cambiar los diseños del acelerador volviendo a la pantalla de conexión</li>
+    <li>Se agregó preferencia para EStop todas las locomotoras en todos los aceleradores cuando Engine Driver se pone en segundo plano</li>
+    <li>Corrección de errores en la pantalla de energía cuando un EX-CS tiene una de las pistas configurada en AUTOMÁTICO</li>
 </ul>
 <p><em><a
         href="https://raw.githubusercontent.com/JMRI/EngineDriver/master/changelog-and-todo-list.txt"
@@ -55,7 +36,7 @@
     del JMRI usando las vistas web. También puedes crear y editar tracciones múltiples (definidas por software).</p>
 <p>Para mas detalles, visite <a href="https://enginedriver.mstevetodd.com" target="_blank">[la página de EngineDriver]</a>.
     Para capturas de pantalla, clic <a href="https://enginedriver.mstevetodd.com/screenshots"
-                              target="_blank">[aquí]</a>.</p>
+                                       target="_blank">[aquí]</a>.</p>
 <h3>Prerequisitos (para JMRI):</h3>
 <p>Verifica que tu dispositivo Android puede conectar a la red WIFI i obtiene una dirección IP.<br/>
     Asegúrate de que estás ejecutando la última versión del <a href="http://jmri.org/" target="_blank">JMRI</a>
@@ -63,11 +44,11 @@
     JMRI y verifica que puedes controlar una Locomotora que esté en el circuito de vía con un "Controlador".</p>
 <p>Inicia la función de
     <a href="http://jmri.sourceforge.net/help/en/package/jmri/jmrit/withrottle/UserInterface.shtml"
-        target="_blank">WiThrottle</a> localizada en la sección Herramientas, Iniciar en el DecoderPro.
-        Es muy recomendable que inicies el <a href="http://jmri.sourceforge.net/help/en/html/web/index.shtml" target="_blank"
-            title="Learn more about JMRI Web Server">Servidor Web del JMRI</a>
-        (Herramientas, Iniciar Servidor Web JMRI).
-        Ambos deberían añadirse a Preferencias, al iniciar el JMRI.</p>
+       target="_blank">WiThrottle</a> localizada en la sección Herramientas, Iniciar en el DecoderPro.
+    Es muy recomendable que inicies el <a href="http://jmri.sourceforge.net/help/en/html/web/index.shtml" target="_blank"
+                                          title="Learn more about JMRI Web Server">Servidor Web del JMRI</a>
+    (Herramientas, Iniciar Servidor Web JMRI).
+    Ambos deberían añadirse a Preferencias, al iniciar el JMRI.</p>
 <h3>Prerequisitos (para MRC Wifi):</h3>
 <p>Conecta al módulo MRC WiFi, y verifica que el dispositivo puede conectar a la red y obtiene una dirección IP.</p>
 <h3>Prerequisitos (para Digitrax LnWi):</h3>
@@ -130,12 +111,12 @@
     controladores activados.</p>
 <p>Es posible configurar los botones laterales del dispositivo para realizar diversas acciones. La asignación
     predeterminada es la siguiente:</p>
-    <dl>
-        <dt>Arriba-izquierda</dt><dd>Incrementa velocidad</dd>
-        <dt>Abajo-izquierda</dt><dd>Disminuye velocidad </dd>
-        <dt>Arriba-derecha</dt><dd>Cambia la dirección</dd>
-        <dt>Abajo-derecha</dt><dd>Selecciona el siguiente controlador</dd>
-    </dl>
+<dl>
+    <dt>Arriba-izquierda</dt><dd>Incrementa velocidad</dd>
+    <dt>Abajo-izquierda</dt><dd>Disminuye velocidad </dd>
+    <dt>Arriba-derecha</dt><dd>Cambia la dirección</dd>
+    <dt>Abajo-derecha</dt><dd>Selecciona el siguiente controlador</dd>
+</dl>
 <p>Estas asignaciones pueden ser modificadas en las Opciones de Preferencias de ESU MobileControl II</p>
 <h3>Configuración:</h3>
 <p>En las Preferencias, hay una extensa lista de opciones donde podrás personalizar las pantallas y acciones

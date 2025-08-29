@@ -259,16 +259,16 @@ public class select_loco extends AppCompatActivity {
                     if ((prefRosterFilter.isEmpty()) && (rosterOwnersFilterIndex==0) ) {
                         includeInList = true;
                     } else if ((!prefRosterFilter.isEmpty()) && (rosterOwnersFilterIndex==0)) {
-                         if (rostername.toUpperCase().contains(prefRosterFilter.toUpperCase())) {
+                        if (rostername.toUpperCase().contains(prefRosterFilter.toUpperCase())) {
                             includeInList = true;
-                         }
+                        }
                     } else if ((prefRosterFilter.isEmpty()) && (rosterOwnersFilterIndex > 0)) {
                         if (owner.equals(rosterOwnersList.get(rosterOwnersFilterIndex))) {
                             includeInList = true;
                         }
                     } else { // if ((prefRosterFilter.length() > 0) && (rosterOwnersFilterIndex > 0)) {
                         if ( (rostername.toUpperCase().contains(prefRosterFilter.toUpperCase()))
-                            && owner.equals(rosterOwnersList.get(rosterOwnersFilterIndex)) ) {
+                                && owner.equals(rosterOwnersList.get(rosterOwnersFilterIndex)) ) {
                             includeInList = true;
                         }
                     }
@@ -544,7 +544,7 @@ public class select_loco extends AppCompatActivity {
             releaseButton1.setVisibility(GONE);
 
             for (int i = 0; i < 2; i++) {
-            consistOptionsLayout[i].setVisibility(GONE);
+                consistOptionsLayout[i].setVisibility(GONE);
             }
         }
 
@@ -765,6 +765,7 @@ public class select_loco extends AppCompatActivity {
 
     //handle return from ConsistEdit
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case sub_activity_type.CONSIST: // edit consist
                 if (newEngine) {
@@ -836,7 +837,7 @@ public class select_loco extends AppCompatActivity {
 
                             // resize bitmap
                             Bitmap resizedBitmap = Bitmap.createScaledBitmap(roughBitmap, (int) (roughBitmap.getWidth() * values[0]),
-                                                                            (int) (roughBitmap.getHeight() * values[4]), true);
+                                    (int) (roughBitmap.getHeight() * values[4]), true);
 
                             int degree = getRotateDegreeFromExif(image_file.getPath());
                             Matrix matrix = new Matrix();
@@ -1150,12 +1151,12 @@ public class select_loco extends AppCompatActivity {
                 consistName = importExportPreferences.recentConsistNameList.get(whichEntryIsBeingUpdated - 1);
             }
             importExportPreferences.addRecentConsistToList(0,consistName,
-                                                                    tempRecentConsistLocoAddressList_inner,
-                                                                    tempRecentConsistAddressSizeList_inner,
-                                                                    tempRecentConsistDirectionList_inner,
-                                                                    tempRecentConsistSourceList_inner,
-                                                                    tempRecentConsistRosterNameList_inner,
-                                                                    tempRecentConsistLightList_inner);
+                    tempRecentConsistLocoAddressList_inner,
+                    tempRecentConsistAddressSizeList_inner,
+                    tempRecentConsistDirectionList_inner,
+                    tempRecentConsistSourceList_inner,
+                    tempRecentConsistRosterNameList_inner,
+                    tempRecentConsistLightList_inner);
 
         }
         importExportPreferences.writeRecentConsistsListToFile(prefs, whichEntryIsBeingUpdated);
@@ -1407,7 +1408,7 @@ public class select_loco extends AppCompatActivity {
                 acquireLoco(true, -1);
                 if (!functions.isEmpty()) {
                     if ( (locoSource == source_type.ROSTER)
-                    || (mainapp.prefAlwaysUseFunctionsFromServer) ) { // unless overridden by the preference
+                            || (mainapp.prefAlwaysUseFunctionsFromServer) ) { // unless overridden by the preference
                         String addrStr = ((locoAddressSize == 0) ? "S" : "L") + locoAddress;
                         String lead = mainapp.consists[whichThrottle].getLeadAddr();
                         if (lead.equals(addrStr)) {                        //*** temp - only process if for lead engine in consist
@@ -1581,7 +1582,7 @@ public class select_loco extends AppCompatActivity {
                 }
                 if ("loco".equals(rosterEntryType)) {
                     locoName = rosterNameString;
-                    sWhichThrottle += rosterNameString;     //append rostername if type is loco (not consist) 
+                    sWhichThrottle += rosterNameString;     //append rostername if type is loco (not consist)
                 }
                 locoSource = source_type.ROSTER;
 
@@ -2096,6 +2097,7 @@ public class select_loco extends AppCompatActivity {
         Log.d(threaded_application.applicationName, activityName + ": onResume():");
         super.onResume();
         threaded_application.activityResumed(activityName);
+        mainapp.removeNotification(this.getIntent());
 
         threaded_application.currentActivity = activity_id_type.SELECT_LOCO;
         if (mainapp.isForcingFinish()) {     //expedite
@@ -2155,7 +2157,18 @@ public class select_loco extends AppCompatActivity {
         mainapp.displayFlashlightMenuButton(menu);
         mainapp.setFlashlightActionViewButton(menu, findViewById(R.id.flashlight_button));
         mainapp.displayPowerStateMenuButton(menu);
-        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+//        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        if (findViewById(R.id.powerLayoutButton) == null) {
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+                }
+            }, 100);
+        } else {
+            mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        }
 
         adjustToolbarSize(menu);
 

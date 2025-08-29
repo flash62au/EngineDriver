@@ -223,6 +223,7 @@ public class function_settings extends AppCompatActivity implements PermissionsH
     public void onResume() {
         super.onResume();
         threaded_application.activityResumed(activityName);
+        mainapp.removeNotification(this.getIntent());
 
         threaded_application.currentActivity = activity_id_type.FUNCTION_SETTINGS;
         if (mainapp.isForcingFinish()) {     //expedite
@@ -267,7 +268,18 @@ public class function_settings extends AppCompatActivity implements PermissionsH
         mainapp.displayFlashlightMenuButton(menu);
         mainapp.setFlashlightActionViewButton(menu, findViewById(R.id.flashlight_button));
         mainapp.displayPowerStateMenuButton(menu);
-        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+//        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        if (findViewById(R.id.powerLayoutButton) == null) {
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+                }
+            }, 100);
+        } else {
+            mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        }
 
         adjustToolbarSize(menu);
 
@@ -594,14 +606,14 @@ public class function_settings extends AppCompatActivity implements PermissionsH
                 et.setText(sVal);
                 isValid = false;
                 threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesOutsideLimits,
-                                                Integer.toString(minVal), Integer.toString(maxVal), Float.toString(maxVal)), Toast.LENGTH_LONG);
+                        Integer.toString(minVal), Integer.toString(maxVal), Float.toString(maxVal)), Toast.LENGTH_LONG);
             } else if (newVal < minVal) {
                 prefs.edit().putString(key, Integer.toString(minVal)).commit();
                 sVal = Integer.toString(minVal);
                 et.setText(sVal);
                 isValid = false;
                 threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesOutsideLimits,
-                                        Integer.toString(minVal), Integer.toString(maxVal), Float.toString(minVal)), Toast.LENGTH_LONG);
+                        Integer.toString(minVal), Integer.toString(maxVal), Float.toString(minVal)), Toast.LENGTH_LONG);
             }
         } catch (NumberFormatException e) {
             prefs.edit().putString(key, defaultVal).commit();
@@ -609,7 +621,7 @@ public class function_settings extends AppCompatActivity implements PermissionsH
             et.setText(sVal);
             isValid = false;
             threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesNotNumeric,
-                                        Integer.toString(minVal), Integer.toString(maxVal), defaultVal), Toast.LENGTH_LONG);
+                    Integer.toString(minVal), Integer.toString(maxVal), defaultVal), Toast.LENGTH_LONG);
         }
         if (isValid) sVal = Integer.toString(newVal);
         return sVal;
@@ -707,8 +719,8 @@ public class function_settings extends AppCompatActivity implements PermissionsH
 //                    initSettingsImpl();
 //                    break;
 //                default:
-                    // do nothing
-                    Log.d(threaded_application.applicationName, activityName + ": navigateToHandler(): Unrecognised permissions request code: " + requestCode);
+            // do nothing
+            Log.d(threaded_application.applicationName, activityName + ": navigateToHandler(): Unrecognised permissions request code: " + requestCode);
 //            }
         }
     }

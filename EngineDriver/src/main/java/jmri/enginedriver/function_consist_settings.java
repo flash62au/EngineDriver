@@ -166,6 +166,7 @@ public class function_consist_settings extends AppCompatActivity implements Perm
     public void onResume() {
         super.onResume();
         threaded_application.activityResumed(activityName);
+        mainapp.removeNotification(this.getIntent());
 
         threaded_application.currentActivity = activity_id_type.FUNCTION_CONSIST_SETTINGS;
         if (mainapp.isForcingFinish()) {     //expedite
@@ -212,7 +213,18 @@ public class function_consist_settings extends AppCompatActivity implements Perm
         mainapp.displayFlashlightMenuButton(menu);
         mainapp.setFlashlightActionViewButton(menu, findViewById(R.id.flashlight_button));
         mainapp.displayPowerStateMenuButton(menu);
-        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+//        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        if (findViewById(R.id.powerLayoutButton) == null) {
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+                }
+            }, 100);
+        } else {
+            mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        }
 
         adjustToolbarSize(menu);
 
@@ -328,7 +340,7 @@ public class function_consist_settings extends AppCompatActivity implements Perm
                 sLocos.setSelection(getArrayIndex(LOCOS, aLocos.get(ndx)));
 //                if ((!isSpecial) && (mainapp.isDCCEX)
                 if ( (!isSpecial)
-                    && (!mainapp.prefConsistFollowRuleStyle.contains(consist_function_rule_style_type.SPECIAL) )
+                        && (!mainapp.prefConsistFollowRuleStyle.contains(consist_function_rule_style_type.SPECIAL) )
                 ) { // if it is for DCC-EX only, don't show the lead/trail etc options
                     sLocos.setVisibility(View.GONE);
                     findViewById(R.id.function_consist_LocosHeader).setVisibility(View.GONE);
@@ -521,8 +533,8 @@ public class function_consist_settings extends AppCompatActivity implements Perm
 //                    initSettingsImpl();
 //                    break;
 //                default:
-                    // do nothing
-                    Log.d(threaded_application.applicationName, activityName + ": navigateTohandler(): Unrecognised permissions request code: " + requestCode);
+            // do nothing
+            Log.d(threaded_application.applicationName, activityName + ": navigateTohandler(): Unrecognised permissions request code: " + requestCode);
 //            }
         }
     }

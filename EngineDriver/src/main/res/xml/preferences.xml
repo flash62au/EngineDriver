@@ -453,7 +453,7 @@
             android:summary="@string/prefHideFunctionButtonsOfNonSelectedThrottleSummary"
             android:title="@string/prefHideFunctionButtonsOfNonSelectedThrottleTitle"
             android:layout="@layout/checkbox_no_icon" />
-        
+
         <ListPreference
             android:defaultValue="@string/prefSimpleThrottleLayoutShowFunctionButtonCountDefaultValue"
             android:key="prefSimpleThrottleLayoutShowFunctionButtonCount"
@@ -925,15 +925,15 @@
                     android:summary="@string/prefThrottleSwitchOption2Summary"
                     android:title="@string/prefThrottleSwitchOption2Title"
                     android:layout="@layout/checkbox_no_icon" />
-<!--
-                <ListPreference
-                    android:defaultValue="@string/prefThrottleSwitchWebViewDefaultValue"
-                    android:entries="@array/prefThrottleSwitchWebViewEntries"
-                    android:entryValues="@array/prefThrottleSwitchWebViewEntryValues"
-                    android:key="prefThrottleSwitchWebView"
-                    android:summary="@string/prefThrottleSwitchWebViewSummary"
-                    android:title="@string/prefThrottleSwitchWebViewTitle" />
--->
+                <!--
+                                <ListPreference
+                                    android:defaultValue="@string/prefThrottleSwitchWebViewDefaultValue"
+                                    android:entries="@array/prefThrottleSwitchWebViewEntries"
+                                    android:entryValues="@array/prefThrottleSwitchWebViewEntryValues"
+                                    android:key="prefThrottleSwitchWebView"
+                                    android:summary="@string/prefThrottleSwitchWebViewSummary"
+                                    android:title="@string/prefThrottleSwitchWebViewTitle" />
+                -->
             </PreferenceCategory>
 
         </PreferenceScreen>
@@ -1052,6 +1052,13 @@
             android:key="stop_on_phonecall_preference"
             android:summary="@string/prefStopOnPhonecallSummary"
             android:title="@string/prefStopOnPhonecallTitle"
+            android:layout="@layout/checkbox_no_icon" />
+
+        <CheckBoxPreference
+            android:defaultValue="@bool/prefStopOnBackgroundDefaultValue"
+            android:key="prefStopOnBackground"
+            android:summary="@string/prefStopOnBackgroundSummary"
+            android:title="@string/prefStopOnBackgroundTitle"
             android:layout="@layout/checkbox_no_icon" />
 
         <CheckBoxPreference
@@ -2220,12 +2227,12 @@
         android:layout="@layout/category_icon_left"
         android:icon="@drawable/category_turnouts_black" >
         <!--<ListPreference-->
-            <!--android:defaultValue="@string/prefHardwareSystemDefaultValue"-->
-            <!--android:entries="@array/hardware_system_namesEntries"-->
-            <!--android:entryValues="@array/hardware_system_namesEntryValues"-->
-            <!--android:key="hardware_system"-->
-            <!--android:summary="@string/prefHardwareSystemSummary"-->
-            <!--android:title="@string/prefHardwareSystemTitle" />-->
+        <!--android:defaultValue="@string/prefHardwareSystemDefaultValue"-->
+        <!--android:entries="@array/hardware_system_namesEntries"-->
+        <!--android:entryValues="@array/hardware_system_namesEntryValues"-->
+        <!--android:key="hardware_system"-->
+        <!--android:summary="@string/prefHardwareSystemSummary"-->
+        <!--android:title="@string/prefHardwareSystemTitle" />-->
 
         <CheckBoxPreference
             android:defaultValue="@bool/prefHideSystemRouteNamesDefaultValue"
@@ -2385,7 +2392,7 @@
         android:layout="@layout/category_icon_left"
         android:icon="@drawable/category_import_black" >
 
-    <PreferenceScreen
+        <PreferenceScreen
             android:layout="@layout/checkbox_icon_left_highlight"
             android:icon="?attr/ed_folder_icon"
             android:key="importExport_preferences"
@@ -2393,12 +2400,12 @@
             android:summary="@string/prefThrottleImportExportSummary"
             android:persistent="false">
 
-        <PreferenceCategory
-            android:title="@string/prefThrottleImportExportTitle"
-            android:layout="@layout/category_icon_left"
-            android:icon="@drawable/category_import_black">
+            <PreferenceCategory
+                android:title="@string/prefThrottleImportExportTitle"
+                android:layout="@layout/category_icon_left"
+                android:icon="@drawable/category_import_black">
 
-            <ListPreference
+                <ListPreference
                     android:defaultValue="@string/prefImportExportDefaultValue"
                     android:entries="@array/prefImportExportEntries"
                     android:entryValues="@array/prefImportExportEntryValues"
@@ -2417,14 +2424,14 @@
                     android:inputType="text"
                     android:maxLines="1"/>
                     -->
-    <!--            <jmri.enginedriver.importServerManualEditTextPreference
-                    android:defaultValue="@string/prefImportServerManualDefaultValue"
-                    android:dialogTitle="@string/prefImportServerManualTitle"
-                    android:key="prefImportServerManual"
-                    android:summary="@string/prefImportServerManualSummary"
-                    android:title="@string/prefImportServerManualTitle"
-                    android:inputType="text"
-                    android:maxLines="1"/>-->
+                <!--            <jmri.enginedriver.importServerManualEditTextPreference
+                                android:defaultValue="@string/prefImportServerManualDefaultValue"
+                                android:dialogTitle="@string/prefImportServerManualTitle"
+                                android:key="prefImportServerManual"
+                                android:summary="@string/prefImportServerManualSummary"
+                                android:title="@string/prefImportServerManualTitle"
+                                android:inputType="text"
+                                android:maxLines="1"/>-->
 
                 <CheckBoxPreference
                     android:defaultValue="@bool/prefImportServerAutoDefaultValue"

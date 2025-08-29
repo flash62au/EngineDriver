@@ -102,6 +102,7 @@ import jmri.enginedriver.type.Consist.ConLoco;
 import jmri.enginedriver.type.auto_import_export_option_type;
 import jmri.enginedriver.type.kids_timer_action_type;
 import jmri.enginedriver.type.max_throttles_current_screen_type;
+import jmri.enginedriver.type.notification_type;
 import jmri.enginedriver.type.restart_reason_type;
 import jmri.enginedriver.type.screen_swipe_index_type;
 import jmri.enginedriver.type.sort_type;
@@ -159,7 +160,7 @@ public class threaded_application extends Application {
     public boolean[][] function_states = {null, null, null, null, null, null};  //current function states for throttles
     public String[] to_system_names;
     public String[] to_user_names;
-//    public String[] to_states;
+    //    public String[] to_states;
     private HashMap<String, String> turnout_states; //includes manual and system
     public HashMap<String, String> to_state_names;
     public int turnoutsOrder = sort_type.NAME;
@@ -177,9 +178,9 @@ public class threaded_application extends Application {
     public int recentConsistsOrder = sort_type.LAST_USED;
     public Map<String, String> consist_entries;
     public static DownloadRosterTask dlRosterTask = null;
-//    private static DownloadMetaTask dlMetadataTask = null;
+    //    private static DownloadMetaTask dlMetadataTask = null;
     HashMap<String, RosterEntry> rosterJmriWeb;  //roster entries retrieved from /roster/?format=xml (null if not retrieved)
-//    public static HashMap<String, String> jmriMetadata = null;  //metadata values (such as JMRIVERSION) retrieved from web server (null if not retrieved)
+    //    public static HashMap<String, String> jmriMetadata = null;  //metadata values (such as JMRIVERSION) retrieved from web server (null if not retrieved)
 //    ImageDownloader imageDownloader = new ImageDownloader();
     ImageDownloader imageDownloader = new ImageDownloader();
     public String power_state;
@@ -246,7 +247,7 @@ public class threaded_application extends Application {
     public final static int DCCEX_MAX_TRACKS = 8;
     public boolean dccexJoined = false;
 
-//    public boolean dccexRosterFullyReceived = false;
+    //    public boolean dccexRosterFullyReceived = false;
     public boolean dccexRosterRequested = false;
     public String dccexRosterString = ""; // used to process the roster list
     public int [] dccexRosterIDs;  // used to process the roster list
@@ -270,7 +271,7 @@ public class threaded_application extends Application {
     public boolean [] dccexTurnoutDetailsReceived;  // used to process the turnout list
 
     public boolean dccexRoutesBeingProcessed = false;
-//    public boolean dccexRoutesRequested = false;
+    //    public boolean dccexRoutesRequested = false;
 //    public boolean dccexRoutesFullyReceived = false;
     public String dccexRouteString = ""; // used to process the route list
     public int [] dccexRouteIDs;  // used to process the route list
@@ -316,7 +317,7 @@ public class threaded_application extends Application {
 
     //these constants are used for onFling
     public static final int SWIPE_MIN_DISTANCE = 120;
-//    public static final int SWIPE_MAX_OFF_PATH = 250;
+    //    public static final int SWIPE_MAX_OFF_PATH = 250;
     public static final int SWIPE_THRESHOLD_VELOCITY = 200;
     public static int min_fling_distance;           // pixel width needed for fling
     public static int min_fling_velocity;           // velocity needed for fling
@@ -327,6 +328,11 @@ public class threaded_application extends Application {
     public static boolean useSmallToolbarButtonSize = true;
     public static final double LARGE_SCREEN_SIZE = 6.7;
 
+    int notificationLevel = 0; // no notification
+    NotificationManager notificationManager;
+    NotificationChannel notificationChannel;
+    NotificationCompat.Builder notificationCompatBuilder;
+    private Notification.Builder notificationBuilder;
     private static final int ED_NOTIFICATION_ID = 416;  //no significance to 416, just shouldn't be 0
 
     private SharedPreferences prefs;
@@ -410,7 +416,7 @@ public class threaded_application extends Application {
     public boolean prefThrottleViewImmersiveModeHideToolbar = true;
     public boolean prefActionBarShowServerDescription = false;
 
-//    public static final String HAPTIC_FEEDBACK_NONE = "None";
+    //    public static final String HAPTIC_FEEDBACK_NONE = "None";
     public static final String HAPTIC_FEEDBACK_SLIDER = "Slider";
     public static final String HAPTIC_FEEDBACK_SLIDER_SCALED = "Scaled";
 
@@ -539,66 +545,132 @@ public class threaded_application extends Application {
      * Currently call this from each activity onPause, passing the current intent
      * to return to when reopening.
      */
-    private void addNotification(Intent notificationIntent) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            String CHANNEL_ID = "ed_channel_HIGH";// The id of the channel.
-            String CHANNEL_ID_QUIET = "ed_channel_HIGH_quiet";// The id of the channel without sound.
-            String channelId;
-            CharSequence name = this.getString(R.string.notification_title);// The user-visible name of the channel.
-            NotificationChannel mChannel;
 
-            boolean prefFeedbackWhenGoingToBackground = prefs.getBoolean("prefFeedbackWhenGoingToBackground", getResources().getBoolean(R.bool.prefFeedbackWhenGoingToBackgroundDefaultValue));
-            if (prefFeedbackWhenGoingToBackground) {
-                channelId = CHANNEL_ID;
-                mChannel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_HIGH);
+    // -----------------------------------------------------------------------------------------------------------------------------------
+    // Notifications
+
+
+    private void createNotificationChannelAndManager(Intent notificationIntent) {
+
+        if (notificationManager == null) {
+            if (notificationIntent == null) return;
+            // create it
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                String CHANNEL_ID = "ed_channel_HIGH";// The id of the channel.
+                String CHANNEL_ID_QUIET = "ed_channel_HIGH_quiet";// The id of the channel without sound.
+                String channelId;
+                CharSequence name = this.getString(R.string.notificationInBackgroundTitle);// The user-visible name of the channel.
+
+                boolean prefFeedbackWhenGoingToBackground = prefs.getBoolean("prefFeedbackWhenGoingToBackground", getResources().getBoolean(R.bool.prefFeedbackWhenGoingToBackgroundDefaultValue));
+                if (prefFeedbackWhenGoingToBackground) {
+                    channelId = CHANNEL_ID;
+                    notificationChannel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_HIGH);
+                } else {
+                    channelId = CHANNEL_ID_QUIET;
+                    notificationChannel = new NotificationChannel(CHANNEL_ID_QUIET, name, NotificationManager.IMPORTANCE_DEFAULT);
+                    notificationChannel.setSound(null, null);
+                }
+
+                PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
+                        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                notificationBuilder = new Notification.Builder(getApplicationContext(), notificationChannel.getId());
+
+                notificationBuilder = notificationBuilder
+                        .setSmallIcon(R.drawable.icon_notification)
+                        .setContentTitle(this.getString(R.string.notificationInBackgroundTitle))
+                        .setContentText("")
+                        .setContentIntent(contentIntent)
+                        .setOngoing(true)
+                        .setOnlyAlertOnce(false)
+                        .setChannelId(channelId);
+
+                // Add as notification
+                notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                notificationManager.createNotificationChannel(notificationChannel);
+
             } else {
-                channelId = CHANNEL_ID_QUIET;
-                mChannel = new NotificationChannel(CHANNEL_ID_QUIET, name, NotificationManager.IMPORTANCE_DEFAULT);
-                mChannel.setSound(null, null);
+                //noinspection deprecation
+                notificationCompatBuilder =
+                        new NotificationCompat.Builder(this)
+                                .setSmallIcon(R.drawable.icon)
+                                .setContentTitle(getResources().getString(R.string.notificationInBackgroundTitle))
+                                .setContentText("")
+                                .setOngoing(true)
+                                .setOnlyAlertOnce(false)
+                                .setPriority(NotificationManager.IMPORTANCE_HIGH);
+
+                PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
+                        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                notificationCompatBuilder.setContentIntent(contentIntent);
+
+                // Add as notification
+                notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             }
+        }
 
+    }
+
+    private void addNotification(Intent notificationIntent, int level) {
+        if ( (isActivityVisible()) || (notificationLevel>0) ) return;
+        Log.d(applicationName, "t_a: addNotification()");
+        notificationLevel = level;
+        String notificationText = getResources().getString(R.string.notificationInBackgroundText);
+        if (level == 2) {
+            notificationText = getResources().getString(R.string.notificationInBackgroundTextLowMemory);
+        } else if (level == 3) {
+            notificationText = getResources().getString(R.string.notificationInBackgroundTextKilled);
+        }
+
+        vibrate(new long[]{1000, 500, 1000, 500});
+        createNotificationChannelAndManager(notificationIntent);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationBuilder.setContentText(notificationText);
             PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
                     PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-            Notification.Builder builder = new Notification.Builder(getApplicationContext(), mChannel.getId());
+            notificationManager.notify(ED_NOTIFICATION_ID, notificationBuilder.build());
 
-            builder = builder
-                    .setSmallIcon(R.drawable.icon_notification)
-                    .setContentTitle(this.getString(R.string.notification_title))
-                    .setContentText(this.getString(R.string.notification_text))
-                    .setContentIntent(contentIntent)
-                    .setOngoing(true)
-                    .setChannelId(channelId);
-
-            // Add as notification
-            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            manager.createNotificationChannel(mChannel);
-            manager.notify(ED_NOTIFICATION_ID, builder.build());
         } else {
-            //noinspection deprecation
-            @SuppressLint("IconColors") NotificationCompat.Builder builder =
-                    new NotificationCompat.Builder(this)
-                            .setSmallIcon(R.drawable.icon)
-                            .setContentTitle(this.getString(R.string.notification_title))
-                            .setContentText(this.getString(R.string.notification_text))
-                            .setOngoing(true);
+            notificationCompatBuilder.setContentText(notificationText);
 
             PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
                     PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            builder.setContentIntent(contentIntent);
-
-            // Add as notification
-            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            manager.notify(ED_NOTIFICATION_ID, builder.build());
-            safeToast(R.string.notification_title, Toast.LENGTH_LONG);
+            notificationCompatBuilder.setContentIntent(contentIntent);
+            notificationManager.notify(ED_NOTIFICATION_ID, notificationCompatBuilder.build());
         }
     }
 
+//    private void updateNotification(String updateText) {
+//        if ( (notificationManager == null) || (isActivityVisible()) ) return;
+//        Log.d(applicationName, "Engine Driver:updateNotification()");
+//        notificationLevel = 2;
+//
+//        vibrate(new long[]{1000, 500, 1000, 500});
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            notificationBuilder.setContentText(updateText);
+//            notificationBuilder.setOnlyAlertOnce(false);
+//            notificationManager.notify(ED_NOTIFICATION_ID, notificationBuilder.build());
+//        } else {
+//            notificationCompatBuilder.setContentText(updateText);
+//            notificationCompatBuilder.setOnlyAlertOnce(false);
+//            notificationManager.notify(ED_NOTIFICATION_ID, notificationCompatBuilder.build());
+//        }
+//    }
+
     // Remove notification
-    private void removeNotification() {
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        manager.cancel(ED_NOTIFICATION_ID);
+    public void removeNotification(Intent notificationIntent) {
+        Log.d(applicationName, "Engine Driver:removeNotification()");
+        if (notificationIntent == null) return;
+        notificationLevel = 0;
+        createNotificationChannelAndManager(notificationIntent);
+        notificationManager.cancel(ED_NOTIFICATION_ID);
     }
+
+    // Notifications
+    // -----------------------------------------------------------------------------------------------------------------------------------
+
 
     @Override
     public void onCreate() {
@@ -682,10 +754,11 @@ public class threaded_application extends Application {
 
         @Override
         public void onActivityResumed(@NonNull Activity activity) {
+            Log.d(applicationName, "t_a: ALO/ALH: onActivityResumed(): " + activity.getComponentName() + " : " + (isInBackground ? "Coming out of Background" : "forground"));
             if (isInBackground) {                           // if coming out of background
                 isInBackground = false;
                 exitConfirmed = false;
-                removeNotification();
+                removeNotification((runningActivity != null) ? runningActivity.getIntent() : null);
             }
             runningActivity = activity;                 // save most recently resumed activity
         }
@@ -704,8 +777,9 @@ public class threaded_application extends Application {
 
         @Override
         public void onActivityDestroyed(@NonNull Activity activity) {
+            Log.d(applicationName, "t_a: ALO/ALH: onActivityDestroyed(): " + activity.getComponentName());
             if (isInBackground && activity == runningActivity) {
-                removeNotification();           // destroyed in background so remove notification
+                removeNotification((runningActivity != null) ? runningActivity.getIntent() : null); // destroyed in background so remove notification
             }
         }
 
@@ -715,30 +789,60 @@ public class threaded_application extends Application {
 
         @Override
         public void onLowMemory() {
+            Log.d(applicationName, "t_a: ALO/ALH: onLowMemory():");
         }
 
         @Override
         public void onTrimMemory(int level) {
-            Log.d(applicationName, "t_a: onTrimMemory(): " + level);
+            if (exitConfirmed) return;
+
+            Log.d(applicationName, "t_a: ALO/ALH: onTrimMemory(): " + level);
             if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {   // if in background
                 if (!isInBackground) {                              // if just went into bkg
                     isInBackground = true;
-                    if (!exitConfirmed) {                       // if user did not just confirm exit
-                        addNotification(runningActivity.getIntent());
-//                    } else {                                    // user confirmed exit
+                    addNotification(runningActivity.getIntent(), notification_type.APP_PUSHED_TO_BACKGROUND);
+                    prefs.edit().putBoolean("prefForcedRestart", true).commit();
+                    prefs.edit().putInt("prefForcedRestartReason", restart_reason_type.APP_PUSHED_TO_BACKGROUND).commit();
+
+                    if (prefs.getBoolean("prefStopOnBackground",
+                            mainapp.getResources().getBoolean(R.bool.prefStopOnBackgroundDefaultValue))) {
+                        Log.d(threaded_application.applicationName, activityName + ": onTrimMemory(): Stopping Trains");
+                        for (int i = 0; i < mainapp.numThrottles; i++) {
+                            if (mainapp.consists[i].isActive()) {
+                                sendMsg(comm_msg_handler, message_type.ESTOP_ONE_THROTTLE, "", i);
+                            }
+                        }
                     }
                 }
-                if (level >= ComponentCallbacks2.TRIM_MEMORY_MODERATE) { // time to kill app
-                    if (!exitConfirmed) {       // if TA is running in bkg
-                        if (!isActivityVisible()) {   // double check it is in background
-                            // disconnect and shutdown
-                            sendMsg(comm_msg_handler, message_type.DISCONNECT, "", 1);
-                            exitConfirmed = true;
-                        }
+
+                if ( (level == ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) ) {
+                    if (!isActivityVisible()) {   // double check it is in background
+//                        updateNotification(getResources().getString(R.string.notificationInBackgroundTextLowMemory));
+                        removeNotification((runningActivity != null) ? runningActivity.getIntent() : null);
+                        addNotification(runningActivity.getIntent(), notification_type.LOW_MEMORY);
+                    }
+                }
+                else if (level >= ComponentCallbacks2.TRIM_MEMORY_MODERATE) {
+                    if (!isActivityVisible()) {   // double check it is in background
+                        // disconnect and shutdown
+                        safeToast(getResources().getString(R.string.notificationInBackgroundTextKilled),Toast.LENGTH_LONG);
+                        sendMsg(comm_msg_handler, message_type.SHUTDOWN, "", 1);
+                        exitConfirmed = true;
                     }
                 }
             }
         }
+
+        @Override
+        public void onActivityPreDestroyed(Activity activity) {
+            Log.d(applicationName, "t_a: ALO/ALH: onActivityPreDestroyed(): " + activity.getComponentName());
+        }
+
+        @Override
+        public void onActivityPreResumed(Activity activity) {
+            Log.d(applicationName, "t_a: ALO/ALH: onActivityPreResumed(): " + activity.getComponentName());
+        }
+
     }
 
     public boolean isForcingFinish() {
@@ -1602,7 +1706,7 @@ public class threaded_application extends Application {
         }
     }
 
-    // forward a message to all running activities 
+    // forward a message to all running activities
     public void alert_activities(int msgType, String msgBody) {
         try {
             sendMsg(connection_msg_handler, msgType, msgBody);
@@ -1755,7 +1859,7 @@ public class threaded_application extends Application {
         if ( (port > 0) || (defaultUrl.toLowerCase().startsWith("http")) ) {
             if (defaultUrl.toLowerCase().startsWith("http")) { //if url starts with http, use it as is
                 url = defaultUrl;
-            } else { //, else prepend servername and port and slash if needed           
+            } else { //, else prepend servername and port and slash if needed
                 url = "http://" + host_ip + ":" + port + (defaultUrl.startsWith("/") ? "" : "/") + defaultUrl;
             }
         }
@@ -1909,7 +2013,7 @@ public class threaded_application extends Application {
             } else {
                 exitConfirmed = true;
                 exitDoubleBackButtonInitiated = 0;
-                sendMsg(comm_msg_handler, message_type.DISCONNECT, "");  //trigger disconnect / shutdown sequence
+                sendMsg(comm_msg_handler, message_type.SHUTDOWN, "");  //trigger disconnect / shutdown sequence
                 buttonVibration();
             }
         }
@@ -1928,7 +2032,7 @@ public class threaded_application extends Application {
             } else {
                 exitConfirmed = true;
                 exitDoubleBackButtonInitiated = 0;
-                sendMsg(comm_msg_handler, message_type.DISCONNECT, "", 1);  //trigger fast disconnect / shutdown sequence
+                sendMsg(comm_msg_handler, message_type.SHUTDOWN, "", 1);  //trigger fast disconnect / shutdown sequence
                 buttonVibration();
             }
         }
@@ -1951,9 +2055,9 @@ public class threaded_application extends Application {
                 Log.d(applicationName, "t_a: checkAskExit(): onClick() ");
                 exitConfirmed = true;
                 if (!forceFastDisconnect) {
-                    sendMsg(comm_msg_handler, message_type.DISCONNECT, "");  //trigger disconnect / shutdown sequence
+                    sendMsg(comm_msg_handler, message_type.SHUTDOWN, "");  //trigger disconnect / shutdown sequence
                 } else {
-                    sendMsg(comm_msg_handler, message_type.DISCONNECT, "", 1);  //trigger fast disconnect / shutdown sequence
+                    sendMsg(comm_msg_handler, message_type.SHUTDOWN, "", 1);  //trigger fast disconnect / shutdown sequence
                 }
                 buttonVibration();
             }
@@ -2549,7 +2653,7 @@ public class threaded_application extends Application {
 //                Toast.makeText(context,
 //                        context.getResources().getString(R.string.toastPreferencesImportServerManualSucceeded, prefs.getString("prefPreferencesImportFileName", "")), Toast.LENGTH_LONG).show();
                 safeToast(context.getResources().getString(R.string.toastPreferencesImportServerManualSucceeded,
-                                        prefs.getString("prefPreferencesImportFileName", "")), Toast.LENGTH_LONG);
+                        prefs.getString("prefPreferencesImportFileName", "")), Toast.LENGTH_LONG);
                 break;
             }
             case restart_reason_type.RESET: {
@@ -2583,14 +2687,16 @@ public class threaded_application extends Application {
 //                        context.getResources().getString(R.string.toastPreferencesImportServerAutoSucceeded, prefs.getString("prefPreferencesImportFileName", "")),
 //                        Toast.LENGTH_LONG).show();
                 safeToast(context.getResources().getString(R.string.toastPreferencesImportServerAutoSucceeded,
-                                    prefs.getString("prefPreferencesImportFileName", "")),
+                                prefs.getString("prefPreferencesImportFileName", "")),
                         Toast.LENGTH_LONG);
                 break;
             }
             case restart_reason_type.FORCE_WIFI: {
-//                Toast.makeText(context, context.getResources().getString(R.string.toastPreferencesChangedForceWiFi),
-//                        Toast.LENGTH_LONG).show();
                 safeToast(R.string.toastPreferencesChangedForceWiFi, Toast.LENGTH_LONG);
+                break;
+            }
+            case restart_reason_type.APP_PUSHED_TO_BACKGROUND: {
+                safeToast(R.string.notificationAppWasKilledInBackground, Toast.LENGTH_LONG);
                 break;
             }
         }
@@ -2604,6 +2710,7 @@ public class threaded_application extends Application {
                 && (prefForcedRestartReason != restart_reason_type.AUTO_IMPORT)
                 && (prefForcedRestartReason != restart_reason_type.FORCE_WIFI)
                 && (prefForcedRestartReason != restart_reason_type.DEAD_ZONE)
+                && (prefForcedRestartReason != restart_reason_type.APP_PUSHED_TO_BACKGROUND)
                 && (prefForcedRestartReason != restart_reason_type.SHAKE_THRESHOLD));
     }
 
@@ -2908,11 +3015,14 @@ public class threaded_application extends Application {
     }
 
     public void hideSoftKeyboard(View view) {
-        hideSoftKeyboard(view, "unknown");
+        hideSoftKeyboard(view, "unknown", true);
     }
     public void hideSoftKeyboard(View view, String activityName) {
+        hideSoftKeyboard(view, activityName, true);
+    }
+    public void hideSoftKeyboard(View view, String activityName, boolean activityIsInTransition) {
         Log.d(applicationName, "t_a: hideSoftKeyboard()");
-        activityInTransition(activityName);
+        if (activityIsInTransition) activityInTransition(activityName);
         // Check if no view has focus:
         if (view != null) {
             try {
@@ -3191,9 +3301,9 @@ public class threaded_application extends Application {
         int fadeIn = R.anim.fade_in;
         if (swipe) {
             if (deltaX > 0.0) {
-                    fadeIn = R.anim.push_right_in;
+                fadeIn = R.anim.push_right_in;
             } else {
-                    fadeIn = R.anim.push_left_in;
+                fadeIn = R.anim.push_left_in;
             }
         }
         return fadeIn;
@@ -3203,9 +3313,9 @@ public class threaded_application extends Application {
         int fadeOut = R.anim.fade_out;
         if (swipe) {
             if (deltaX > 0.0) {
-                    fadeOut = R.anim.push_right_out;
+                fadeOut = R.anim.push_right_out;
             } else {
-                    fadeOut = R.anim.push_left_out;
+                fadeOut = R.anim.push_left_out;
             }
         }
         return fadeOut;

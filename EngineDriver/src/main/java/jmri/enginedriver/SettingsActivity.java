@@ -235,6 +235,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         Log.d(threaded_application.applicationName, activityName + ": onResume()");
         super.onResume();
         threaded_application.activityResumed(activityName);
+        mainapp.removeNotification(this.getIntent());
 
         threaded_application.currentActivity = activity_id_type.SETTINGS;
 
@@ -658,7 +659,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     prefs.edit().putString("prefImportExport", import_export_option_type.NONE).commit();  //reset the preference
                     prefs.edit().putString("prefHostImportExport", import_export_option_type.NONE).commit();  //reset the preference
                     threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesImportServerManualFailed,
-                            prefs.getString("prefImportServerManual", getApplicationContext().getResources().getString(R.string.prefImportServerManualDefaultValue))),
+                                    prefs.getString("prefImportServerManual", getApplicationContext().getResources().getString(R.string.prefImportServerManualDefaultValue))),
                             Toast.LENGTH_LONG);
                     reload();
                     break;
@@ -729,9 +730,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 ////                File Directory = new File(ENGINE_DRIVER_DIR); // in case the folder does not already exist
 //
 //                // Output stream
-////                FileOutputStream output = new FileOutputStream(Environment
-////                        .getExternalStorageDirectory().toString()
-////                        + "/" + ENGINE_DRIVER_DIR + "/" + EXTERNAL_URL_PREFERENCES_IMPORT);
+    ////                FileOutputStream output = new FileOutputStream(Environment
+    ////                        .getExternalStorageDirectory().toString()
+    ////                        + "/" + ENGINE_DRIVER_DIR + "/" + EXTERNAL_URL_PREFERENCES_IMPORT);
 //                FileOutputStream output = new FileOutputStream(context.getExternalFilesDir(null)
 //                        + "/" + EXTERNAL_URL_PREFERENCES_IMPORT);
 //
@@ -789,14 +790,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 //    }
 
     protected void loadImagefromGallery() {
-       // Create intent to Open Image applications like Gallery, Google Photos
+        // Create intent to Open Image applications like Gallery, Google Photos
         Intent galleryIntent = new Intent(Intent.ACTION_PICK,
                 android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         // Start the Intent
         startActivityForResult(galleryIntent, RESULT_LOAD_IMG);
     }
 
-     //Handle pressing of the back button to end this activity
+    //Handle pressing of the back button to end this activity
     @Override
     public boolean onKeyDown(int key, KeyEvent event) {
         mainapp.exitDoubleBackButtonInitiated = 0;
@@ -825,7 +826,18 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         mainapp.displayFlashlightMenuButton(menu);
         mainapp.setFlashlightActionViewButton(menu, findViewById(R.id.flashlight_button));
         mainapp.displayPowerStateMenuButton(menu);
-        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+//        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        if (findViewById(R.id.powerLayoutButton) == null) {
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+                }
+            }, 100);
+        } else {
+            mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        }
 
         adjustToolbarSize(menu);
 
@@ -904,18 +916,18 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 sharedPreferences.edit().putString(key, Integer.toString(maxVal)).commit();
                 prefText.setText(Integer.toString(maxVal));
                 threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesOutsideLimits,
-                                        Integer.toString(minVal), Integer.toString(maxVal), Integer.toString(maxVal)), Toast.LENGTH_LONG);
+                        Integer.toString(minVal), Integer.toString(maxVal), Integer.toString(maxVal)), Toast.LENGTH_LONG);
             } else if (newVal < minVal) {
                 sharedPreferences.edit().putString(key, Integer.toString(minVal)).commit();
                 prefText.setText(Integer.toString(minVal));
                 threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesOutsideLimits,
-                                        Integer.toString(minVal), Integer.toString(maxVal), Integer.toString(minVal)), Toast.LENGTH_LONG);
+                        Integer.toString(minVal), Integer.toString(maxVal), Integer.toString(minVal)), Toast.LENGTH_LONG);
             }
         } catch (NumberFormatException e) {
             sharedPreferences.edit().putString(key, defaultVal).commit();
             prefText.setText(defaultVal);
             threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesNotNumeric,
-                                        Integer.toString(minVal), Integer.toString(maxVal), defaultVal), Toast.LENGTH_LONG);
+                    Integer.toString(minVal), Integer.toString(maxVal), defaultVal), Toast.LENGTH_LONG);
         }
     }
 
@@ -977,18 +989,18 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 sharedPreferences.edit().putString(key, Float.toString(maxVal)).commit();
                 prefText.setText(Float.toString(maxVal));
                 threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesOutsideLimits,
-                                    Float.toString(minVal), Float.toString(maxVal), Float.toString(maxVal)), Toast.LENGTH_LONG);
+                        Float.toString(minVal), Float.toString(maxVal), Float.toString(maxVal)), Toast.LENGTH_LONG);
             } else if (newVal < minVal) {
                 sharedPreferences.edit().putString(key, Float.toString(minVal)).commit();
                 prefText.setText(Float.toString(minVal));
                 threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesOutsideLimits,
-                                    Float.toString(minVal), Float.toString(maxVal), Float.toString(minVal)), Toast.LENGTH_LONG);
+                        Float.toString(minVal), Float.toString(maxVal), Float.toString(minVal)), Toast.LENGTH_LONG);
             }
         } catch (NumberFormatException e) {
             sharedPreferences.edit().putString(key, defaultVal).commit();
             prefText.setText(defaultVal);
             threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesNotNumeric,
-                                    Float.toString(minVal), Float.toString(maxVal), defaultVal), Toast.LENGTH_LONG);
+                    Float.toString(minVal), Float.toString(maxVal), defaultVal), Toast.LENGTH_LONG);
         }
     }
 
@@ -1005,15 +1017,15 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             }
         }
         if ( (!prefThrottleScreenType.equals(prefThrottleScreenTypeOriginal))
-        || (prefDisplaySemiRealisticThrottleNotchesOriginal != prefDisplaySemiRealisticThrottleNotches) ) {
+                || (prefDisplaySemiRealisticThrottleNotchesOriginal != prefDisplaySemiRealisticThrottleNotches) ) {
             SharedPreferences.Editor prefEdit = sharedPreferences.edit();
             prefEdit.commit();
 
-            if (maxThrottlesCurrentScreenTypeOriginal >= mainapp.getMaxThottlesForScreen(prefThrottleScreenType)) {
-                forceRestartAppOnPreferencesClose = true;
-            } else {
-                forceReLaunchAppOnPreferencesClose = true;
-            }
+//            if (maxThrottlesCurrentScreenTypeOriginal >= mainapp.getMaxThottlesForScreen(prefThrottleScreenType)) {
+            forceRestartAppOnPreferencesClose = true;
+//            } else {
+//                forceReLaunchAppOnPreferencesClose = true;
+//            }
             forceRestartAppOnPreferencesCloseReason = restart_reason_type.THROTTLE_SWITCH;
         }
     }
@@ -1038,7 +1050,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             sharedPreferences.edit().putString("NumThrottle", textNumbers[max[index]-1]).commit();
             if (numThrottles > max[index]-1) { // only display the warning if the requested amount is lower than the max or fixed.
                 threaded_application.safeToast(getApplicationContext().getResources().getString(R.string.toastNumThrottles,
-                                        textNumbers[max[index] - 1]), Toast.LENGTH_LONG);
+                        textNumbers[max[index] - 1]), Toast.LENGTH_LONG);
             }
             ListPreference p = (ListPreference) prefScreen.findPreference("NumThrottle");
             if (p != null) {
@@ -1072,8 +1084,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         if (numThrottles > max[index]) numThrottles = max[index]; // probably has not had a chance to refresh yet.
 
+
         final Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.num_throttle_dialog);
+        Button cancelButton = dialog.findViewById(R.id.num_throttles_dialog_button_cancel);
+
         List<String> entryList=new ArrayList<>();
         List<String> entryValueList=new ArrayList<>();
         int size = this.getResources().getStringArray(R.array.NumOfThrottlesEntries).length;
@@ -1107,6 +1122,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 dialog.cancel();
             }
         });
+        cancelButton.setOnClickListener(v -> {dialog.dismiss(); reload();} );
         dialog.show();
     }
 
@@ -1238,8 +1254,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         boolean enable =
                 !prefThrottleScreenType.equals(throttle_screen_type.DEFAULT)
-                && !prefThrottleScreenType.equals(throttle_screen_type.SWITCHING_HORIZONTAL)
-                && prefPauseSpeedButton;
+                        && !prefThrottleScreenType.equals(throttle_screen_type.SWITCHING_HORIZONTAL)
+                        && prefPauseSpeedButton;
         enableDisablePreference(prefScreen, "prefPauseAlternateButton", enable);
     }
 
@@ -1471,11 +1487,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             Log.d(threaded_application.applicationName, activityName + ": onCreatePreferences()");
-                setPreferencesFromResource(R.xml.preferences, rootKey);
+            setPreferencesFromResource(R.xml.preferences, rootKey);
 
             Activity a = getActivity();
 //            if(a instanceof SettingsActivity) {
-                parentActivity = (SettingsActivity) a;
+            parentActivity = (SettingsActivity) a;
 //            }
 
             setPreferencesUI();
@@ -1486,6 +1502,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             Log.d(threaded_application.applicationName, activityName + ": SettingsFragment onResume()");
             super.onResume();
             threaded_application.activityResumed(activityName);
+            if (parentActivity != null)
+                parentActivity.mainapp.removeNotification(parentActivity.getIntent());
 
             threaded_application.currentActivity = activity_id_type.SETTINGS;
 
@@ -1590,9 +1608,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         parentActivity.showHideThrottleSwitchPreferences(getPreferenceScreen());
                         showHideThrottleWebViewPreferences(sharedPreferences);
                         if ( (parentActivity.prefThrottleScreenType.equals(throttle_screen_type.SIMPLE))
-                           && (prefs.getString("prefSimpleThrottleLayoutShowFunctionButtonCount", parentActivity.getApplicationContext().getResources().getString(R.string.prefSimpleThrottleLayoutShowFunctionButtonCountDefaultValue)).equals("0"))
-                           && ( (!prefs.getString("prefDeviceSounds0", parentActivity.getApplicationContext().getResources().getString(R.string.prefDeviceSoundsDefaultValue)).equals("none"))
-                              || (!prefs.getString("prefDeviceSounds0", parentActivity.getApplicationContext().getResources().getString(R.string.prefDeviceSoundsDefaultValue)).equals("none")) ) ) {
+                                && (prefs.getString("prefSimpleThrottleLayoutShowFunctionButtonCount", parentActivity.getApplicationContext().getResources().getString(R.string.prefSimpleThrottleLayoutShowFunctionButtonCountDefaultValue)).equals("0"))
+                                && ( (!prefs.getString("prefDeviceSounds0", parentActivity.getApplicationContext().getResources().getString(R.string.prefDeviceSoundsDefaultValue)).equals("none"))
+                                || (!prefs.getString("prefDeviceSounds0", parentActivity.getApplicationContext().getResources().getString(R.string.prefDeviceSoundsDefaultValue)).equals("none")) ) ) {
                             threaded_application.safeToast(parentActivity.getApplicationContext().getResources().getString(R.string.toastDeviceSoundsSimpleLayoutWarning), Toast.LENGTH_LONG);
                         }
                         parentActivity.showThrottleNumberPreferenceDialog(getPreferenceScreen());
@@ -1895,9 +1913,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         if (!MobileControl2.isMobileControl2()) {
                             removePreference(advancedPreference);
                         } else {
-                             if (!advancedPreference1.equals("prefEsuMc2")) {
-                                 removePreference(advancedPreference);
-                             }
+                            if (!advancedPreference1.equals("prefEsuMc2")) {
+                                removePreference(advancedPreference);
+                            }
                         }
                     } else {
                         Log.d(threaded_application.applicationName, activityName + ": hideAdvancedPreferences(): '" + advancedPreference1 + "' not found.");

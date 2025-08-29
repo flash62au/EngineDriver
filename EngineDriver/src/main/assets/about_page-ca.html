@@ -17,28 +17,10 @@
 </div>
 <p><b>Els canvis d'aquesta versió inclouen:</b></p>
 <ul>
-    <li>Mou a les biblioteques d'AndroidX</li>
-    <li>Suport per a ESU MC II/Pro</li>
-    <li>Preferència d'utilitzar botons grans de la barra d'eines. El valor predeterminat és gran a les pantalles >= 6,7"/17 cm.</li>
-    <li>Correccions d'errors per a l'accelerador semi-realista</li>
-    <li>S'han canviat els avisos de permís d'ubicació per un missatge de brindis</li>
-    <li>Afegeix una opció a la icona ED de la barra d'acció per tornar a la pantalla de l'accelerador.  Això s'habilitarà de manera predeterminada a les instal·lacions noves</li>
-    <li>Canvis als temes original, colorit i fosc per fer que els botons siguin més tridimensionals</li>
-    <li>Reelaboració de les pantalles Select Loco i DCC-EX per basar-se més en glifs.</li>
-    <li>S'ha reorganitzat la pàgina Select Loco per adaptar millor el text que no és anglès. (principalment alemany)</li>
-    <li>Nova ordre "G" per al tipus de teclat de joc per forçar una funció encara que sigui momentània</li>
-    <li>Quan canvieu els dissenys de l'accelerador i el nou disseny admet una sèrie d'acceleradores, el controlador del motor us demanarà el número.</li>
-    <li>Envieu sol·licituds de resincronització addicionals després de tornar a connectar DCC-EX</li>
-    <li>DCC-EX Prefereix seqüència de sol·licituds d'elements</li>
-    <li>Correcció d'errors per a F0-F9 en alguns sistemes: s'ha eliminat el zero inicial de l'identificador de FKey quan s'envia</li>
-    <li>Correcció d'errors per al mode immersiu</li>
-    <li>Neteja dels dissenys de l'accelerador horitzontal. Arreglar alguns problemes d'alçada</li>
-    <li>només torna a dibuixar la llista de rutes si realment s'ha canviat</li>
-    <li>Correcció d'errors per a l'opció de protocol de connexió "automàtica" no anglesa</li>
-    <li>Avís separat de quan el servei "Utilitza la ubicació" està desactivat (a diferència de no WiFi)</li>
-    <li>Nova preferència d'enviar un sol accelerador EStop en prem llargament el botó d'aturada</li>
-    <li>S'ha afegit la possibilitat de compartir els fitxers de registre o qualsevol fitxer de l'emmagatzematge (privat) amb abast d'ED</li>
-    <li>S'ha afegit la possibilitat de compartir qualsevol fitxer a l'emmagatzematge (privat) amb abast d'ED</li>
+    <li>Darrera versió de Engine Driver compatible amb Android 4.x</li>
+    <li>Correcció per canviar els dissenys de l'accelerador tornant a la pantalla de connexió</li>
+    <li>S'ha afegit una preferència per ESaturar totes les locomotores a tots els acceleradors quan Engine Driver es posa en segon pla</li>
+    <li>Correcció d'errors per a la pantalla d'alimentació quan un EX-CS té una de les pistes configurades per a AUTO</li>
 </ul>
 <p><em><a
         href="https://raw.githubusercontent.com/JMRI/EngineDriver/master/changelog-and-todo-list.txt"
@@ -54,7 +36,7 @@
     les vistes web. També pots crear i editar traccions múltiples (definides per programari).</p>
 <p>Per a mes detalls, visiti <a href="https://enginedriver.mstevetodd.com" target="_blank">[la pàgina del EngineDriver]</a>.
     Per a captures de pantalla, clic <a href="https://enginedriver.mstevetodd.com/screenshots"
-                              target="_blank">[aquí]</a>.</p>
+                                        target="_blank">[aquí]</a>.</p>
 <h3>Prerequisits (per a JMRI):</h3>
 <p>Verifica que el teu dispositiu Android pot connectar a la xarxa WIFI i obté una adreça IP.<br/>
     Asegura't que estàs executant l'última versió del <a href="http://jmri.org/" target="_blank">JMRI</a>
@@ -64,8 +46,8 @@
 <p>Inicia la funció <a
         href="http://jmri.sourceforge.net/help/en/package/jmri/jmrit/withrottle/UserInterface.shtml"
         target="_blank">WiThrottle</a> del JMRI, localitzada a la secció Eines, Controladors en el DecoderPro. Es molt recomenable que iniciïs el <a
-            href="http://jmri.sourceforge.net/help/en/html/web/index.shtml" target="_blank"
-            title="Learn more about JMRI Web Server">Servidor Web del JMRI</a>
+        href="http://jmri.sourceforge.net/help/en/html/web/index.shtml" target="_blank"
+        title="Learn more about JMRI Web Server">Servidor Web del JMRI</a>
     (Eines, Iniciar Servidor Web JMRI).&nbsp;
     Tots dos s'haurien d'afegir a Preferències, en iniciar el JMRI.</p>
 <h3>Prerequisits (per a MRC Wifi):</h3>
@@ -130,12 +112,12 @@
     per als controladors aturats actualment. També es desactiva el canvi entre els controladors activats.</p>
 <p>És possible configurar els botons laterals del dispositiu per a realitzar diverses accions. L'assignació
     predeterminada es la següent:</p>
-    <dl>
-        <dt>Adalt-esquerra</dt><dd>Incrementa velocitat</dd>
-        <dt>Abaix-esquerra</dt><dd>Disminueix velocitat</dd>
-        <dt>Adalt-dreta</dt><dd>Canvia la direcció</dd>
-        <dt>Abaix-dreta</dt><dd>Selecciona el següent controlador</dd>
-    </dl>
+<dl>
+    <dt>Adalt-esquerra</dt><dd>Incrementa velocitat</dd>
+    <dt>Abaix-esquerra</dt><dd>Disminueix velocitat</dd>
+    <dt>Adalt-dreta</dt><dd>Canvia la direcció</dd>
+    <dt>Abaix-dreta</dt><dd>Selecciona el següent controlador</dd>
+</dl>
 <p>Aquestes asignacions poden ser modificades en les Opcions de Preferències de ESU MobileControl II</p>
 <h3>Configuració:</h3>
 <p>En les Preferències, hi ha una extensa llista d'opcions on podràs personalitzar les pantalles i

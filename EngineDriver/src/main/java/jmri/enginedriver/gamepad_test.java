@@ -113,14 +113,14 @@ public class gamepad_test extends AppCompatActivity implements OnGestureListener
     private final int[] gamePadKeys =     {0,        0,   KEYCODE_W,  KEYCODE_X, KEYCODE_A, KEYCODE_D, KEYCODE_V, KEYCODE_T, KEYCODE_N, KEYCODE_R, KEYCODE_F,0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     private final int[] gamePadKeys_Up =  {0,        0,   KEYCODE_W,  KEYCODE_X, KEYCODE_A, KEYCODE_D, KEYCODE_V, KEYCODE_T, KEYCODE_N, KEYCODE_R, KEYCODE_F,0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     private static final int[] BUTTON_ACTION_NUMBERS ={
-                                     -1,       9,   5,          7,         8,         6,         0,         1,         3,         2,         4,        10,11,12,13,14,15,-1,-1,-1,-1};
+            -1,       9,   5,          7,         8,         6,         0,         1,         3,         2,         4,        10,11,12,13,14,15,-1,-1,-1,-1};
     private static final int GAMEPAD_KEYS_LENGTH = 21;
 
     private ToneGenerator tg;
 
     private Button[] bButtons;
 
-//    private TextView tvGamepadMode;
+    //    private TextView tvGamepadMode;
     private TextView tvGamepadKeyCode;
     private TextView tvGamepadKeyFunction;
     private TextView tvGamepadComplete;
@@ -425,83 +425,83 @@ public class gamepad_test extends AppCompatActivity implements OnGestureListener
     public boolean dispatchGenericMotionEvent(android.view.MotionEvent event) {
         //Log.d(threaded_application.applicationName, activityName + ": dispatchGenericMotionEvent(): " + event.getAction());
 //        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB_MR1) {
-            if ((!prefGamePadType.equals("None")) && (!mainapp.prefGamePadIgnoreJoystick)) { // respond to the gamepad and keyboard inputs only if the preference is set
-                int action;
+        if ((!prefGamePadType.equals("None")) && (!mainapp.prefGamePadIgnoreJoystick)) { // respond to the gamepad and keyboard inputs only if the preference is set
+            int action;
 
-                float xAxis;
-                xAxis = event.getAxisValue(MotionEvent.AXIS_X);
-                float yAxis = event.getAxisValue(MotionEvent.AXIS_Y);
-                float xAxis2 = event.getAxisValue(MotionEvent.AXIS_Z);
-                float yAxis2 = event.getAxisValue(MotionEvent.AXIS_RZ);
+            float xAxis;
+            xAxis = event.getAxisValue(MotionEvent.AXIS_X);
+            float yAxis = event.getAxisValue(MotionEvent.AXIS_Y);
+            float xAxis2 = event.getAxisValue(MotionEvent.AXIS_Z);
+            float yAxis2 = event.getAxisValue(MotionEvent.AXIS_RZ);
 
-                if ((xAxis!=0) || (yAxis!=0)) {
-                    action = ACTION_DOWN;
-                } else {
-                    action = ACTION_UP;
-                }
-
-                if (action == ACTION_UP) {
-                    GamepadFeedbackSoundStop();
-                }
-
-                if (yAxis == -1) { // DPAD Up Button
-                    setButtonOn(bButtons[2], prefGamePadButtons[5],"DPad Up", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesUpCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(5);
-                    return (true); // stop processing this key
-
-                } else if (yAxis == 1) { // DPAD Down Button
-                    setButtonOn(bButtons[3], prefGamePadButtons[7],"DPad Down", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesDownCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(7);
-                    return (true); // stop processing this key
-
-                } else if (xAxis == -1) { // DPAD Left Button
-                    setButtonOn(bButtons[4], prefGamePadButtons[8],"DPad Left", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesLeftCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(8);
-                    return (true); // stop processing this key
-
-                } else if (xAxis == 1) { // DPAD Right Button
-                    setButtonOn(bButtons[5], prefGamePadButtons[6],"DPad Right", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesRightCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(6);
-                    return (true); // stop processing this key
-                }
-
-                if (yAxis2 == -1) { // DPAD2 Up Button
-                    setButtonOn(bButtons[2], prefGamePadButtons[5],"DPad2 Up", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesUpCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(5);
-                    return (true); // stop processing this key
-
-                } else if (yAxis2 == 1) { // DPAD2 Down Button
-                    setButtonOn(bButtons[3], prefGamePadButtons[7],"DPad2 Down", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesDownCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(7);
-                    return (true); // stop processing this key
-
-                } else if (xAxis2 == -1) { // DPAD2 Left Button
-                    setButtonOn(bButtons[4], prefGamePadButtons[8],"DPad2 Left", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesLeftCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(8);
-                    return (true); // stop processing this key
-
-                } else if (xAxis2 == 1) { // DPAD2 Right Button
-                    setButtonOn(bButtons[5], prefGamePadButtons[6],"DPad2 Right", action);
-                    setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesRightCode), action);
-                    GamepadFeedbackSound(false);
-                    isTestComplete(6);
-                    return (true); // stop processing this key
-                }
+            if ((xAxis!=0) || (yAxis!=0)) {
+                action = ACTION_DOWN;
+            } else {
+                action = ACTION_UP;
             }
+
+            if (action == ACTION_UP) {
+                GamepadFeedbackSoundStop();
+            }
+
+            if (yAxis == -1) { // DPAD Up Button
+                setButtonOn(bButtons[2], prefGamePadButtons[5],"DPad Up", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesUpCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(5);
+                return (true); // stop processing this key
+
+            } else if (yAxis == 1) { // DPAD Down Button
+                setButtonOn(bButtons[3], prefGamePadButtons[7],"DPad Down", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesDownCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(7);
+                return (true); // stop processing this key
+
+            } else if (xAxis == -1) { // DPAD Left Button
+                setButtonOn(bButtons[4], prefGamePadButtons[8],"DPad Left", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesLeftCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(8);
+                return (true); // stop processing this key
+
+            } else if (xAxis == 1) { // DPAD Right Button
+                setButtonOn(bButtons[5], prefGamePadButtons[6],"DPad Right", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesRightCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(6);
+                return (true); // stop processing this key
+            }
+
+            if (yAxis2 == -1) { // DPAD2 Up Button
+                setButtonOn(bButtons[2], prefGamePadButtons[5],"DPad2 Up", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesUpCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(5);
+                return (true); // stop processing this key
+
+            } else if (yAxis2 == 1) { // DPAD2 Down Button
+                setButtonOn(bButtons[3], prefGamePadButtons[7],"DPad2 Down", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesDownCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(7);
+                return (true); // stop processing this key
+
+            } else if (xAxis2 == -1) { // DPAD2 Left Button
+                setButtonOn(bButtons[4], prefGamePadButtons[8],"DPad2 Left", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesLeftCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(8);
+                return (true); // stop processing this key
+
+            } else if (xAxis2 == 1) { // DPAD2 Right Button
+                setButtonOn(bButtons[5], prefGamePadButtons[6],"DPad2 Right", action);
+                setAllKeyCodes( this.getResources().getString(R.string.gamepadTestKeyCodesRightCode), action);
+                GamepadFeedbackSound(false);
+                isTestComplete(6);
+                return (true); // stop processing this key
+            }
+        }
 //        }
 
         return super.dispatchGenericMotionEvent(event);
@@ -731,6 +731,7 @@ public class gamepad_test extends AppCompatActivity implements OnGestureListener
     public void onResume() {
         super.onResume();
         threaded_application.activityResumed(activityName);
+        mainapp.removeNotification(this.getIntent());
 
         threaded_application.currentActivity = activity_id_type.GAMEPAD_TEST;
         mainapp.setActivityOrientation(this);  //set screen orientation based on prefs
@@ -781,7 +782,18 @@ public class gamepad_test extends AppCompatActivity implements OnGestureListener
         mainapp.displayFlashlightMenuButton(menu);
         mainapp.setFlashlightActionViewButton(menu, findViewById(R.id.flashlight_button));
         mainapp.displayPowerStateMenuButton(menu);
-        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+//        mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        if (findViewById(R.id.powerLayoutButton) == null) {
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+                }
+            }, 100);
+        } else {
+            mainapp.setPowerStateActionViewButton(menu, findViewById(R.id.powerLayoutButton));
+        }
 
         adjustToolbarSize(menu);
 
@@ -887,6 +899,10 @@ public class gamepad_test extends AppCompatActivity implements OnGestureListener
     @Override
     public boolean onSingleTapUp(MotionEvent e) {
         return false;
+    }
+
+    private void disconnect() {
+        this.finish();
     }
 
     private void shutdown() {
