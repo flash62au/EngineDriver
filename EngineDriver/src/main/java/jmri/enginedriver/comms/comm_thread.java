@@ -379,6 +379,10 @@ public class comm_thread extends Thread {
             address = addr;
             rosterName = addr;
         }
+        if (rosterName.trim().isEmpty()) { //if blank rosterName, just use address for both
+            rosterName = addr;
+            Log.d(threaded_application.applicationName, activityName + ": sendAquireLoco(): acquireLoco: addr:'" + addr + "' - blank rosterName should not have occured");
+        }
 
         String msgTxt;
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
