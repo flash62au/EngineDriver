@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Objects;
 
 import jmri.enginedriver.type.activity_id_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.message_type;
 import jmri.enginedriver.util.BackgroundImageLoader;
 import jmri.enginedriver.util.LocaleHelper;
@@ -193,44 +194,104 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
 
     //**************************************
 
+    private class BundleMessageHandler extends Handler {
 
-    //Handle messages from the communication thread back to this thread (responses from withrottle)
-    @SuppressLint("HandlerLeak")
-    class DccExMessageHandler extends Handler {
-
-        public DccExMessageHandler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
+        @Override
         public void handleMessage(Message msg) {
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+
+            Bundle bundle = msg.getData();
+            String response_str;
+
             switch (msg.what) {
-                case message_type.RECEIVED_DECODER_ADDRESS:
-                    String response_str = msg.obj.toString();
-                    if ((!response_str.isEmpty()) && !(response_str.charAt(0) == '-')) {  //refresh address
-                        dccexAddress = response_str;
-                        dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexSucceeded);
-                    } else {
-                        dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexFailed);
+                case message_type.RECEIVED_DCCEX_RESPONSE: {
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.COMMAND))) {
+
+                        response_str = bundle.getString(alert_bundle_tag_type.COMMAND);
+
+                        displayCommands(response_str, true);
+                        refreshDccexCommandsView();
                     }
+                    break;
+                }
+                case message_type.DCCEX_COMMAND_ECHO:  // informational - display the outbound command
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.COMMAND))) {
+                        response_str = bundle.getString(alert_bundle_tag_type.COMMAND);
+
+                        displayCommands(response_str, false);
+                        refreshDccexCommandsView();
+                    }
+                    break;
+
+                case message_type.RECEIVED_WRITE_DECODER_SUCCESS:
+                    dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexSucceeded);
+                    refreshDccexView();
+                    break;
+                case message_type.RECEIVED_WRITE_DECODER_FAIL:
+                    dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexFailed);
                     refreshDccexView();
                     break;
 
-                case message_type.RECEIVED_CONSIST_ADDRESS:
-                    String consist_response_str = msg.obj.toString();
-                    if (!consist_response_str.equals("0")) {
-                        dccexInfoStr = String.format(getApplicationContext().getResources().getString(R.string.dccexInCv19Consist), consist_response_str);
-                    } else {
-                        dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexNotInCv19Consist);
-                    }
-                    refreshDccexView();
+                case message_type.RECEIVED_DCCEX_TRACKS:
+                    refreshDccexTracksView();
                     break;
 
-                case message_type.RECEIVED_CV:
-                    String cvResponseStr = msg.obj.toString();
-                    if (!cvResponseStr.isEmpty()) {
-                        String[] cvArgs = cvResponseStr.split("(\\|)");
-                        if ((cvArgs[0].equals(dccexCv)) && !(cvArgs[1].charAt(0) == '-')) { // response matches what we got back
-                            dccexCvValue = cvArgs[1];
+                case message_type.RECEIVED_POWER_STATE_CHANGE:
+                    mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
+                    break;
+
+                case message_type.RECEIVED_DCCEX_ESTOP_PAUSED:
+                case message_type.RECEIVED_DCCEX_ESTOP_RESUMED:
+                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                    break;
+
+                case message_type.RECEIVED_DECODER_ADDRESS: {
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.DECODER_ADDRESS))) {
+                        String decoderAddress = bundle.getString(alert_bundle_tag_type.DECODER_ADDRESS);
+                        if ((decoderAddress != null)
+                                && (!decoderAddress.isEmpty()) && !(decoderAddress.charAt(0) == '-')) {  //refresh address
+                            dccexAddress = decoderAddress;
+                            dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexSucceeded);
+                        } else {
+                            dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexFailed);
+                        }
+                        refreshDccexView();
+                    }
+                    break;
+                }
+
+                case message_type.RECEIVED_CONSIST_ADDRESS: {
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.CONSIST_ADDRESS))) {
+
+                        String consistAddress = bundle.getString(alert_bundle_tag_type.CONSIST_ADDRESS);
+                        if ((consistAddress != null) && (!consistAddress.equals("0"))) {
+                            dccexInfoStr = String.format(getApplicationContext().getResources().getString(R.string.dccexInCv19Consist), consistAddress);
+                        } else {
+                            dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexNotInCv19Consist);
+                        }
+                        refreshDccexView();
+                    }
+                    break;
+                }
+
+                case message_type.RECEIVED_CV: {
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.CV))
+                            && (bundle.containsKey(alert_bundle_tag_type.CV_VALUE)) ) {
+
+                        String cv = bundle.getString(alert_bundle_tag_type.CV);
+                        String cvValue = bundle.getString(alert_bundle_tag_type.CV_VALUE);
+                        if ((cv != null) && (cvValue != null)
+                                && ((cv.equals(dccexCv)) && !(cvValue.charAt(0) == '-'))) { // response matches what we got back
+                            dccexCvValue = cvValue;
                             dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexSucceeded);
                             checkCv29(dccexCv, dccexCvValue);
                         } else {
@@ -240,72 +301,33 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                         refreshDccexView();
                     }
                     break;
+                }
 
-                case message_type.DCCEX_COMMAND_ECHO:  // informational response
-                    displayCommands(msg.obj.toString(), false);
-//                    refreshDccexView();
-                    refreshDccexCommandsView();
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.REFRESH_OVERFLOW_MENU:
+                    refreshOverflowMenu();
                     break;
 
-                case message_type.DCCEX_RESPONSE:  // informational response
-                    displayCommands(msg.obj.toString(), true);
-//                    refreshDccexView();
-                    refreshDccexCommandsView();
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.WIT_CON_RETRY:
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.MESSAGE))) {
+
+                        witRetry(bundle.getString(alert_bundle_tag_type.MESSAGE));
+                    }
                     break;
 
-                case message_type.WRITE_DECODER_SUCCESS:
-                    dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexSucceeded);
+                case message_type.WIT_CON_RECONNECT:
                     refreshDccexView();
                     break;
-                case message_type.WRITE_DECODER_FAIL:
-                    dccexInfoStr = getApplicationContext().getResources().getString(R.string.dccexFailed);
-                    refreshDccexView();
-                    break;
-                case message_type.RECEIVED_TRACKS:
-                    refreshDccexTracksView();
-                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
 
                 case message_type.REOPEN_THROTTLE:
                     if (threaded_application.currentActivity == activity_id_type.DCC_EX)
                         endThisActivity();
-                    break;
-
-                case message_type.WIT_CON_RETRY:
-                    witRetry(msg.obj.toString());
-                    break;
-                case message_type.WIT_CON_RECONNECT:
-                    refreshDccexView();
-                    break;
-                case message_type.RESTART_APP:
-                case message_type.RELAUNCH_APP:
-                case message_type.SHUTDOWN:
-                    shutdown();
-                    break;
-                case message_type.DISCONNECT:
-                    disconnect();
-                    break;
-
-                case message_type.RESPONSE:    //handle messages from WiThrottle server
-                    String s = msg.obj.toString();
-                    if (s.length() >= 3) {
-                        String com1 = s.substring(0, 3);
-                        //update power icon
-                        if ("PPA".equals(com1)) {
-                            mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
-                        }
-                        if ("PXX".equals(com1)) {  // individual track power response
-                            refreshDccexTracksView();
-                        }
-                    }
-                    break;
-
-                case message_type.ESTOP_PAUSED:
-                case message_type.ESTOP_RESUMED:
-                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
-                    break;
-
-                case message_type.REFRESH_OVERFLOW_MENU:
-                    refreshOverflowMenu();
                     break;
 
                 case message_type.TERMINATE_ALL_ACTIVITIES_BAR_CONNECTION:
@@ -313,7 +335,14 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                     endThisActivity();
                     break;
 
-                default:
+                case message_type.DISCONNECT:
+                    disconnect();
+                    break;
+
+                case message_type.RESTART_APP:
+                case message_type.RELAUNCH_APP:
+                case message_type.SHUTDOWN:
+                    shutdown();
                     break;
 
             }
@@ -327,10 +356,10 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
             resetTextField(WHICH_ADDRESS);
             mainapp.buttonVibration();
             if (vn < 5.004046) {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_DECODER_ADDRESS, "*", -1);
+                mainapp.alertCommHandlerWithBundle(message_type.REQUEST_DECODER_ADDRESS);
             } else {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.READ_DCCEX_LOCO_ADDRESS, "");
-                mainapp.sendMsgDelay(mainapp.comm_msg_handler, 2000, message_type.READ_DCCEX_CONSIST_ADDRESS, "");
+                mainapp.alertCommHandlerWithBundle(message_type.READ_DCCEX_LOCO_ADDRESS);
+                mainapp.alertCommHandlerWithBundle(message_type.READ_DCCEX_CONSIST_ADDRESS, 2000L);
             }
             refreshDccexView();
             mainapp.hideSoftKeyboard(v);
@@ -346,7 +375,11 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                 if ((addr > 0) && (addr <= 10239)) {
                     dccexAddress = Integer.toString(addr);
                     mainapp.buttonVibration();
-                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_DECODER_ADDRESS, "", addr);
+
+                    Bundle bundle = new Bundle();
+                    bundle.putInt(alert_bundle_tag_type.LOCO, addr);
+                    mainapp.alertCommHandlerWithBundle(message_type.WRITE_DECODER_ADDRESS, bundle);
+
                 } else {
                     resetTextField(WHICH_ADDRESS);
                 }
@@ -368,7 +401,11 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                 if (cv > 0) {
                     dccexCv = Integer.toString(cv);
                     mainapp.buttonVibration();
-                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_CV, "", cv);
+
+                    Bundle bundle = new Bundle();
+                    bundle.putInt(alert_bundle_tag_type.CV, cv);
+                    mainapp.alertCommHandlerWithBundle(message_type.REQUEST_CV, bundle);
+
                     refreshDccexView();
                 }
             } catch (Exception e) {
@@ -393,7 +430,11 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                         dccexCv = Integer.toString(cv);
                         dccexCvValue = Integer.toString(cvValue);
                         mainapp.buttonVibration();
-                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_CV, cvValueStr, cv);
+
+                        Bundle bundle = new Bundle();
+                        bundle.putInt(alert_bundle_tag_type.CV, cv);
+                        bundle.putInt(alert_bundle_tag_type.CV_VALUE, cvValue);
+                        mainapp.alertCommHandlerWithBundle(message_type.WRITE_CV, bundle);
                     } else {
                         resetTextField(WHICH_ADDRESS);
                     }
@@ -402,15 +443,20 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                 }
             } else {
                 try {
-                    Integer cv = Integer.decode(cvStr);
+                    int cv = Integer.decode(cvStr);
                     int cvValue = Integer.decode(cvValueStr);
                     int addr = Integer.decode(addrStr);
                     if ((addr > 0) && (addr <= 10239) && (cv > 0)) {
                         dccexAddress = Integer.toString(addr);
-                        dccexCv = cv.toString();
+                        dccexCv = Integer.toString(cv);
                         dccexCvValue = Integer.toString(cvValue);
                         mainapp.buttonVibration();
-                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_POM_CV, dccexCv + " " + dccexCvValue, addr);
+
+                        Bundle bundle = new Bundle();
+                        bundle.putInt(alert_bundle_tag_type.CV, cv);
+                        bundle.putInt(alert_bundle_tag_type.CV_VALUE, cvValue);
+                        bundle.putInt(alert_bundle_tag_type.LOCO, addr);
+                        mainapp.alertCommHandlerWithBundle(message_type.WRITE_POM_CV, bundle);
                     } else {
                         resetTextField(WHICH_ADDRESS);
                     }
@@ -429,11 +475,15 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
             String cmdStr = dccexSendCommandValueEditText.getText().toString();
             if ((!cmdStr.isEmpty()) && (cmdStr.charAt(0) != '<')) {
                 mainapp.buttonVibration();
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DCCEX_SEND_COMMAND, "<" + cmdStr + ">");
 
-                if ((cmdStr.charAt(0) == '=') && (cmdStr.length() > 1)) // we don't get a response from a tracks command, so request an update
-                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_TRACKS, "");
+                Bundle bundle = new Bundle();
+                bundle.putString(alert_bundle_tag_type.COMMAND, "<" + cmdStr + ">");
+                mainapp.alertCommHandlerWithBundle(message_type.DCCEX_SEND_COMMAND, bundle);
 
+                if ((cmdStr.charAt(0) == '=') && (cmdStr.length() > 1)) { // we don't get a response from a tracks command, so request an update
+                    mainapp.alertCommHandlerWithBundle(message_type.REQUEST_TRACKS);
+
+                }
                 if ((mainapp.dccexPreviousCommandList.isEmpty()) || !(mainapp.dccexPreviousCommandList.get(mainapp.dccexPreviousCommandList.size() - 1).equals(cmdStr))) {
                     mainapp.dccexPreviousCommandList.add(cmdStr);
                     if (mainapp.dccexPreviousCommandList.size() > 20) {
@@ -494,11 +544,10 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
         }
 
         public void onClick(View v) {
-            if (mainapp.dccexTrackPower[myTrack] == 0 ) {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_TRACK_POWER, ""+myTrackLetter, 1);
-            } else {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_TRACK_POWER, ""+myTrackLetter, 0);
-            }
+            Bundle bundle = new Bundle();
+            bundle.putChar(alert_bundle_tag_type.TRACK_CHAR, myTrackLetter);
+            bundle.putInt(alert_bundle_tag_type.POWER_STATE, (mainapp.dccexTrackPower[myTrack] == 0) ? 1 : 0);
+            mainapp.alertCommHandlerWithBundle(message_type.WRITE_TRACK_POWER, bundle);
         }
     }
 
@@ -517,17 +566,25 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                     mainapp.dccexTrackType[i] = typeIndex;
 
                     if (TRACK_TYPES_SELECTABLE[typeIndex]) {
+                        Bundle bundle = new Bundle();
+                        bundle.putChar(alert_bundle_tag_type.TRACK_CHAR, trackLetter);
                         if (!TRACK_TYPES_NEED_ID[typeIndex]) {
                             if (type.equals("AUTO")) { // needs to be set to main first if AUTO is selected
-                                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_TRACK, trackLetter + " MAIN", 0);
+                                bundle.putString(alert_bundle_tag_type.TRACK_TYPE_TEXT, "MAIN");
+                                mainapp.alertCommHandlerWithBundle(message_type.WRITE_TRACK, bundle);
                             }
-                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_TRACK, trackLetter + " " + type, 0);
+                            bundle.putString(alert_bundle_tag_type.TRACK_TYPE_TEXT, type);
+                            bundle.putInt(alert_bundle_tag_type.LOCO, 0);
+                            mainapp.alertCommHandlerWithBundle(message_type.WRITE_TRACK, bundle);
+
                         } else {
                             try {
                                 id = Integer.parseInt(dccexTrackTypeIdEditText[i].getText().toString());
                                 mainapp.dccexTrackId[i] = Integer.toString(id);
                                 if (mainapp.dccexTrackType[i] != TRACK_TYPE_OFF_NONE_INDEX) {
-                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_TRACK, trackLetter + " " + type, id);
+                                    bundle.putString(alert_bundle_tag_type.TRACK_TYPE_TEXT, type);
+                                    bundle.putInt(alert_bundle_tag_type.LOCO, id);
+                                    mainapp.alertCommHandlerWithBundle(message_type.WRITE_TRACK, bundle);
                                 }
                             } catch (Exception ignored) {
                             }
@@ -537,8 +594,9 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
                     }
                 }
             }
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_TRACKS, "");
-//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_TRACKS_POWER, "");
+            mainapp.alertCommHandlerWithBundle(message_type.REQUEST_TRACKS);
+//            mainapp.alertCommHandlerWithBundle(message_type.REQUEST_TRACKS_POWER);
+
             mainapp.hideSoftKeyboard(v);
         }
     }
@@ -556,10 +614,10 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
     public class JoinTracksButtonListener implements View.OnClickListener {
         public void onClick(View v) {
             if (!mainapp.dccexJoined) {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DCCEX_JOIN_TRACKS, "");
+                mainapp.alertCommHandlerWithBundle(message_type.DCCEX_JOIN_TRACKS);
                 activateJoinedButton(true);
             } else {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DCCEX_UNJOIN_TRACKS, "");
+                mainapp.alertCommHandlerWithBundle(message_type.DCCEX_UNJOIN_TRACKS);
                 activateJoinedButton(false);
             }
         }
@@ -822,7 +880,8 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
         setContentView(R.layout.dcc_ex);
 
         //put pointer to this activity's handler in main app's shared variable (If needed)
-        mainapp.dcc_ex_msg_handler = new DccExMessageHandler(Looper.getMainLooper());
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.DCC_EX] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.DCC_EX] = new BundleMessageHandler(Looper.getMainLooper());
 
         readAddressButton = findViewById(R.id.dccex_dccex_read_address_button);
         ReadAddressButtonListener readAddressButtonListener = new ReadAddressButtonListener();
@@ -1037,7 +1096,7 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
             }
         });
 
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_TRACKS, "");
+        mainapp.alertCommHandlerWithBundle(message_type.REQUEST_TRACKS);
 
         OnBackPressedCallback callback = new OnBackPressedCallback(true /* enabled by default */) {
             @Override
@@ -1076,6 +1135,9 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
     public void onStart() {
         Log.d(threaded_application.applicationName, activityName + ": onStart(): called");
         super.onStart();
+
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.DCC_EX] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.DCC_EX] = new BundleMessageHandler(Looper.getMainLooper());
 
         if (prefs.getBoolean("prefBackgroundImage", mainapp.getResources().getBoolean(R.bool.prefBackgroundImageDefaultValue))) {
             BackgroundImageLoader backgroundImageLoader = new BackgroundImageLoader(prefs, mainapp, findViewById(R.id.backgroundImgView));
@@ -1120,12 +1182,8 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
 
         mainapp.hideSoftKeyboard(this.getCurrentFocus());
         mainapp.dccexScreenIsOpen = false;
-        if (mainapp.dcc_ex_msg_handler != null) {
-            mainapp.dcc_ex_msg_handler.removeCallbacksAndMessages(null);
-            mainapp.dcc_ex_msg_handler = null;
-        } else {
-            Log.d(threaded_application.applicationName, activityName + ": onDestroy(): mainapp.dcc_ex_msg_handler is null. Unable to removeCallbacksAndMessages");
-        }
+
+        mainapp.clearActivityBundleMessageHandler(activity_id_type.DCC_EX);
     }
 
     @Override
@@ -1423,7 +1481,7 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
         } else if (powerState == 0) {
             mainapp.theme.resolveAttribute(R.attr.ed_power_red_button, outValue, true);
         } else {
-            if (!mainapp.isDCCEX) {
+            if (mainapp.isWiThrottleProtocol()) {
                 mainapp.theme.resolveAttribute(R.attr.ed_power_yellow_button, outValue, true);
             } else {
                 mainapp.theme.resolveAttribute(R.attr.ed_power_green_red_button, outValue, true);

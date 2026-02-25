@@ -128,6 +128,7 @@ import jmri.enginedriver.esu_mcII.EsuMc2ButtonAction;
 import jmri.enginedriver.esu_mcII.EsuMc2Led;
 import jmri.enginedriver.esu_mcII.EsuMc2LedState;
 import jmri.enginedriver.type.activity_id_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.auto_increment_or_decrement_type;
 import jmri.enginedriver.type.beep_type;
 import jmri.enginedriver.type.consist_function_rule_style_type;
@@ -146,6 +147,7 @@ import jmri.enginedriver.type.sounds_type;
 import jmri.enginedriver.type.speed_button_type;
 import jmri.enginedriver.type.throttle_screen_type;
 import jmri.enginedriver.type.tts_msg_type;
+import jmri.enginedriver.type.turnout_action_type;
 import jmri.enginedriver.util.BackgroundImageLoader;
 import jmri.enginedriver.util.GamePadKeyLoader;
 import jmri.enginedriver.util.GamepadEventHandler;
@@ -371,6 +373,7 @@ public class throttle extends AppCompatActivity implements
     private static String firstUrl = null;          // desired first url when clearing history
     private static String currentUrl = null;
     private Menu overflowMenu;
+    volatile Handler gestureHandler;
     static int REP_DELAY = 25;
     protected int prefSpeedButtonsSpeedStep = 4;
     protected int prefVolumeSpeedButtonsSpeedStep = 1;
@@ -719,18 +722,23 @@ public class throttle extends AppCompatActivity implements
 
         public MyCountDownTimer(long millisInFuture, long countDownInterval) {
             super(millisInFuture, countDownInterval);
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_START, "", 0, 0);
+//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_START, "", 0, 0);
+            mainapp.alertActivitiesWithBundle(message_type.KIDS_TIMER_START, activity_id_type.THROTTLE);
         }
 
         @Override
         public void onFinish() {  // When timer is finished
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_END, "", 0, 0);
+//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_END, "", 0, 0);
+            mainapp.alertActivitiesWithBundle(message_type.KIDS_TIMER_END, activity_id_type.THROTTLE);
         }
 
         @Override
         public void onTick(long millisUntilFinished) {   // millisUntilFinished    The amount of time until finished.
             int secondsLeft = (int) millisUntilFinished / 1000;
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_TICK, "", secondsLeft, 0);
+//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_TICK, "", secondsLeft, 0);
+            Bundle kidsBundle = new Bundle();
+            kidsBundle.putInt(alert_bundle_tag_type.TIMER_TICK, secondsLeft);
+            mainapp.alertActivitiesWithBundle(message_type.KIDS_TIMER_TICK, kidsBundle, activity_id_type.THROTTLE);
         }
     }
 
@@ -850,202 +858,276 @@ public class throttle extends AppCompatActivity implements
         }
     }
 
-    // Handle messages from the communication thread TO this thread (responses from withrottle)
-    @SuppressLint("HandlerLeak")
-    private class ThrottleMessageHandler extends Handler {
+    private class BundleMessageHandler extends Handler {
 
-        public ThrottleMessageHandler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
         @Override
         public void handleMessage(Message msg) {
-            String response_str = msg.obj.toString();
-
-            threaded_application.extendedLogging(activityName + ": handleMessage() " + response_str );
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+            Bundle bundle = msg.getData();
 
             switch (msg.what) {
+                // TODO: not convinced that RESPONSE is needed here  PRA
                 case message_type.RESPONSE: { // handle messages from WiThrottle server
-                    if (response_str.length() < 2)
-                        break;  //bail if too short, to avoid crash
-                    char com0 = response_str.charAt(0);
-                    char com1 = response_str.charAt(1);
-                    int whichThrottle;
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.COMMAND)) ) {
 
-                    switch (com0) {
-                        // various MultiThrottle messages
-                        case 'M':  // multi-throttle
-                            if (response_str.length() < 3)
-                                break;  //bail if too short, to avoid crash
-                            whichThrottle = mainapp.throttleCharToInt(com1); // '0', '1'',2' etc.
-                            char com2 = response_str.charAt(2);
-                            String[] ls = threaded_application.splitByString(response_str, "<;>");
-                            String addr;
-                            try {
-                                addr = ls[0].substring(3);
-                            } catch (Exception e) {
-                                addr = "";
+                        String command = bundle.getString(alert_bundle_tag_type.COMMAND);
+                        if (command.length() < 2)
+                            break;  //bail if too short, to avoid crash
+                        char com0 = command.charAt(0);
+
+                        switch (com0) {
+                            case '0':
+                            case '1':
+                            case '2':
+                            case '3':
+                            case '4':
+                            case '5':
+                                enableDisableButtons(com0); // pass whichThrottle
+                                setLabels();
+                                break;
+                        }
+                    }
+                }
+
+                case message_type.RECEIVED_POWER_STATE_CHANGE:
+                    if (overflowMenu != null)
+                        mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
+                    break;
+
+                case message_type.RECEIVED_DCCEX_ESTOP_PAUSED:
+                case message_type.RECEIVED_DCCEX_ESTOP_RESUMED: {
+                    if (overflowMenu != null)
+                        mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                    break;
+                }
+
+                case message_type.RECEIVED_THROTTLE_SET_SPEED: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE))
+                            && (bundle.containsKey(alert_bundle_tag_type.SPEED)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        int speedWiT = bundle.getInt(alert_bundle_tag_type.SPEED);
+                        speedUpdateWiT(whichThrottle, speedWiT); // update speed slider and indicator
+                    }
+                    break;
+                }
+
+                case message_type.RECEIVED_THROTTLE_SET_DIRECTION: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE))
+                            && (bundle.containsKey(alert_bundle_tag_type.DIRECTION))
+                            && (bundle.containsKey(alert_bundle_tag_type.LOCO)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        int dir = bundle.getInt(alert_bundle_tag_type.DIRECTION);
+                        String addr = bundle.getString(alert_bundle_tag_type.LOCO);
+                        Consist con;
+                        int curDir = dirs[whichThrottle];
+                        con = mainapp.consists[whichThrottle];
+
+                        if ( ( addr == null) || ( addr.isEmpty()) || (con == null) ) break;
+
+                        if (addr.equals(con.getLeadAddr())) {
+                            if (dir != curDir) { // lead/consist direction changed from outside of ED
+                                showDirectionRequest(whichThrottle, dir);       // update requested direction indication
+                                setEngineDirection(whichThrottle, dir, true);   // update rest of consist to match new direction
+                                // needed for the switching throttle layouts
+                                speedUpdate(whichThrottle,
+                                        getSpeedFromCurrentSliderPosition(whichThrottle, false));
                             }
-                            if ((whichThrottle >= 0) && (whichThrottle < mainapp.prefNumThrottles)) {
-                                if (com2 == '+' || com2 == 'L') { // if loco added or function labels updated
-                                    if (com2 == ('+')) {
-                                        enableDisableButtons(whichThrottle); // direction and slider: pass whichThrottle
-                                        showHideConsistMenus();
-                                    }
-                                    // loop through all function buttons and set label and dcc functions (based on settings) or hide if no label
-                                    set_function_labels_and_listeners_for_view(whichThrottle);
-                                    enableDisableButtonsForView(functionButtonViewGroups[whichThrottle], true);
-                                    soundsShowHideDeviceSoundsButton(whichThrottle);
-                                    showHideSpeedLimitAndPauseButtons(whichThrottle);
-                                    setLabels();
-                                } else if (com2 == '-') { // if loco removed
-                                    removeLoco(whichThrottle);
-                                    swapToNextAvailableThrottleForGamePad(whichThrottle, true); // see if we can/need to move the gamepad to another throttle
-                                    mainapp.gamePadDescriptorsAssignedToThrottles[whichThrottle] = "";
-//                                    mainapp.gamePadIdsAssignedToThrottles[whichThrottle] = 0;
-                                    mainapp.gamePadThrottleAssignment[whichThrottle] = -1;
+                        } else {
+                            int locoDir = curDir;               // calc correct direction for this (non-lead) loco
+                            try {
+                                if (con.isReverseOfLead(addr))
+                                    locoDir ^= 1;
+                                if (locoDir != dir) {// if loco has wrong direction then correct it
+//                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DIRECTION, addr, whichThrottle, locoDir);
 
-                                } else if (com2 == 'A') { // Action e.g. MTAL2608<;>R1
-                                    char com3 = ' ';
-                                    if (ls.length >= 2) { //make sure there's a value to parse
-                                        com3 = ls[1].charAt(0);
-                                    }
-                                    if (com3 == 'R') { // set direction
-                                        int dir;
-                                        try {
-                                            dir = Integer.parseInt(ls[1].substring(1, 2));
-                                        } catch (Exception e) {
-                                            dir = 1;
-                                        }
+                                    Bundle dirBundle = new Bundle();
+                                    dirBundle.putString(alert_bundle_tag_type.LOCO_TEXT, addr);
+                                    dirBundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+                                    dirBundle.putInt(alert_bundle_tag_type.DIRECTION, locoDir);
+                                    mainapp.alertCommHandlerWithBundle(message_type.DIRECTION, dirBundle);
+                                }
+                            } catch (
+                                    Exception e) {     // isReverseOfLead returns null if addr is not in con
+                                // - should not happen unless WiT is reporting on engine user just dropped from ED consist?
+                                threaded_application.extendedLogging(activityName + ": " + whichThrottle + " loco " + addr + " direction reported by WiT but engine is not assigned");
+                            }
+                        }
+                    }
+                    break;
+                }
 
-                                        Consist con;
-                                        int curDir = dirs[whichThrottle];
-                                        con = mainapp.consists[whichThrottle];
+                case message_type.RECEIVED_THROTTLE_SET_FUNCTION: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE))
+                            && (bundle.containsKey(alert_bundle_tag_type.LOCO))
+                            && (bundle.containsKey(alert_bundle_tag_type.FUNCTION))
+                            && (bundle.containsKey(alert_bundle_tag_type.FUNCTION_ACTION)) ) {
 
-                                        if (addr.equals(con.getLeadAddr())) {
-                                            if (dir != curDir) { // lead/consist direction changed from outside of ED
-                                                showDirectionRequest(whichThrottle, dir);       // update requested direction indication
-                                                setEngineDirection(whichThrottle, dir, true);   // update rest of consist to match new direction
-                                                // needed for the switching throttle layouts
-                                                speedUpdate(whichThrottle,
-                                                        getSpeedFromCurrentSliderPosition(whichThrottle, false));
-                                            }
-                                        } else {
-                                            int locoDir = curDir;               // calc correct direction for this (non-lead) loco
-                                            try {
-                                                if (con.isReverseOfLead(addr))
-                                                    locoDir ^= 1;
-                                                if (locoDir != dir) {// if loco has wrong direction then correct it
-                                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DIRECTION, addr, whichThrottle, locoDir);
-                                                }
-                                            } catch (
-                                                    Exception e) {     // isReverseOfLead returns null if addr is not in con
-                                                // - should not happen unless WiT is reporting on engine user just dropped from ED consist?
-                                                threaded_application.extendedLogging(activityName + ": " + whichThrottle + " loco " + addr + " direction reported by WiT but engine is not assigned");
-                                            }
-                                        }
-                                    } else if (com3 == 'V') { // set speed
-                                        try {
-                                            int speedWiT = Integer.parseInt(ls[1].substring(1));
-                                            speedUpdateWiT(whichThrottle, speedWiT); // update speed slider and indicator
-                                        } catch (Exception ignored) {
-                                        }
-                                    } else if (com3 == 'F') { // function key
-                                        try {
-                                            int function = Integer.parseInt(ls[1].substring(2));
-                                            int action = Integer.parseInt(ls[1].substring(1, 2));
-//                                            doFunctionSound(whichThrottle, function);
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        String addr = bundle.getString(alert_bundle_tag_type.LOCO);
+                        int function = bundle.getInt(alert_bundle_tag_type.FUNCTION);
+                        int action = bundle.getInt(alert_bundle_tag_type.FUNCTION_ACTION);
 
-                                            String loco = ls[0].substring(3);
-                                            Consist con = mainapp.consists[whichThrottle];
-                                            if ((mainapp.prefConsistFollowRuleStyle.equals(consist_function_rule_style_type.ORIGINAL))
-                                                    || (loco.equals(con.getLeadAddr()))) { //if using the 'complex' follow function rules, only send it to the lead loco
-                                                set_function_state(whichThrottle, function);
-                                            }
+                        Consist con = mainapp.consists[whichThrottle];
+                        if ((mainapp.prefConsistFollowRuleStyle.equals(consist_function_rule_style_type.ORIGINAL))
+                                || (addr.equals(con.getLeadAddr()))) { //if using the 'complex' follow function rules, only send it to the lead loco
+                            set_function_state(whichThrottle, function);
+                        }
 
-                                            //ipls equivalents
-                                            if (((function >= 1) && function <= 2)
-                                                    && (!mainapp.prefDeviceSounds[whichThrottle].equals("none"))
-                                                    && (mainapp.prefDeviceSoundsF1F2ActivateBellHorn)) {
-                                                if (function == 1) {
-                                                    if (action == 0) { // up
-                                                        if (bSoundsExtras[sounds_type.BUTTON_BELL][whichThrottle].isSelected()) {
-                                                            handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_BELL, sounds_type.BELL,
-                                                                    MotionEvent.ACTION_UP);
-                                                        } // else do nothing
-                                                    } else { // down
-                                                        if (!bSoundsExtras[sounds_type.BUTTON_BELL][whichThrottle].isSelected()) {
-                                                            handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_BELL, sounds_type.BELL,
-                                                                    MotionEvent.ACTION_DOWN);
-                                                        } // else do nothing
-                                                    }
+                        //ipls equivalents
+                        if (((function >= 1) && function <= 2)
+                                && (!mainapp.prefDeviceSounds[whichThrottle].equals("none"))
+                                && (mainapp.prefDeviceSoundsF1F2ActivateBellHorn)) {
+                            if (function == 1) {
+                                if (action == 0) { // up
+                                    if (bSoundsExtras[sounds_type.BUTTON_BELL][whichThrottle].isSelected()) {
+                                        handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_BELL, sounds_type.BELL,
+                                                MotionEvent.ACTION_UP);
+                                    } // else do nothing
+                                } else { // down
+                                    if (!bSoundsExtras[sounds_type.BUTTON_BELL][whichThrottle].isSelected()) {
+                                        handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_BELL, sounds_type.BELL,
+                                                MotionEvent.ACTION_DOWN);
+                                    } // else do nothing
+                                }
 
-                                                } else {
-                                                    if (action == 0) {
-                                                        if (bSoundsExtras[sounds_type.BUTTON_HORN][whichThrottle].isSelected()) {
-                                                            handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_HORN, sounds_type.HORN,
-                                                                    MotionEvent.ACTION_UP);
-                                                        } // else do nothing
-                                                    } else { // down
-                                                        if (!bSoundsExtras[sounds_type.BUTTON_HORN][whichThrottle].isSelected()) {
-                                                            handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_HORN, sounds_type.HORN,
-                                                                    MotionEvent.ACTION_DOWN);
-                                                        } // else do nothing
-                                                    }
-                                                }
-                                            }
-                                        } catch (Exception ignored) {
-                                        }
-                                    } else if (com3 == 's') { // set speed step
-                                        try {
-                                            int speedStepCode = Integer.parseInt(ls[1].substring(1));
-                                            setSpeedStepsFromWiT(whichThrottle, speedStepCode);
-                                        } catch (Exception ignored) {
-                                        }
-                                    }
+                            } else {
+                                if (action == 0) {
+                                    if (bSoundsExtras[sounds_type.BUTTON_HORN][whichThrottle].isSelected()) {
+                                        handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_HORN, sounds_type.HORN,
+                                                MotionEvent.ACTION_UP);
+                                    } // else do nothing
+                                } else { // down
+                                    if (!bSoundsExtras[sounds_type.BUTTON_HORN][whichThrottle].isSelected()) {
+                                        handleDeviceButtonAction(whichThrottle, sounds_type.BUTTON_HORN, sounds_type.HORN,
+                                                MotionEvent.ACTION_DOWN);
+                                    } // else do nothing
                                 }
                             }
-                            break;
-
-                        case '0':
-                        case '1':
-                        case '2':
-                        case '3':
-                        case '4':
-                        case '5':
-                            enableDisableButtons(com0); // pass whichThrottle
-                            setLabels();
-                            break;
-                        case 'P': // panel info
-                            if (com1 == 'W') { // PW - web server port info
-                                initWeb();
-                                setLabels();
-                            } else if (com1 == 'P') { // PP - power state change
-                                setLabels();
-                            }
-                            break;
-                    } // end of switch
-
-                    if (!selectLocoRendered) // call set_labels if the select loco textViews had not rendered the last time it was called
-                        setLabels();
+                        }
+                    }
                 }
-                break;
 
-                case message_type.ESTOP_PAUSED:
-                case message_type.ESTOP_RESUMED:
-                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                case message_type.RECEIVED_THROTTLE_SET_SPEED_STEP: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE))
+                            && (bundle.containsKey(alert_bundle_tag_type.SPEED_STEPS)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        int speedStepCode = bundle.getInt(alert_bundle_tag_type.SPEED_STEPS);
+                        setSpeedStepsFromWiT(whichThrottle, speedStepCode);
+                    }
+                }
+
+                case message_type.RECEIVED_THROTTLE_LOCO_ADDED: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        enableDisableButtons(whichThrottle); // direction and slider: pass whichThrottle
+                        showHideConsistMenus();
+                    }
+                    // fall through and do the rest for the label update
+                }
+                case message_type.RECEIVED_THROTTLE_FUNCTION_LABELS_UPDATE: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        set_function_labels_and_listeners_for_view(whichThrottle);
+                        enableDisableButtonsForView(functionButtonViewGroups[whichThrottle], true);
+                        soundsShowHideDeviceSoundsButton(whichThrottle);
+                        showHideSpeedLimitAndPauseButtons(whichThrottle);
+                        setLabels();
+                    }
+                    break;
+                }
+                case message_type.RECEIVED_THROTTLE_LOCO_REMOVED: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        removeLoco(whichThrottle);
+                        swapToNextAvailableThrottleForGamePad(whichThrottle, true); // see if we can/need to move the gamepad to another throttle
+                        mainapp.gamePadDescriptorsAssignedToThrottles[whichThrottle] = "";
+                        mainapp.gamePadThrottleAssignment[whichThrottle] = -1;
+                    }
+                    break;
+                }
+
+                case message_type.ESTOP: // only needed for the Semi-Realistic Throttle
+                    if ( (isSemiRealisticThrottle)
+                            && (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        semiRealisticThrottleSliderPositionUpdate(whichThrottle, 0);
+                        setTargetSpeed(whichThrottle, 0);
+                    }
                     break;
 
-                case message_type.REFRESH_OVERFLOW_MENU:
-                    refreshOverflowMenu();
+                case message_type.ESTOP_ONE_THROTTLE: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        setSpeed(whichThrottle, 0, speed_commands_from_type.BUTTONS);
+                    }
+                    break;
+                }
+
+                case message_type.RECEIVED_ROSTER_UPDATE:
+                    setLabels();               // refresh function labels when any roster response is received
                     break;
 
-                case message_type.REQUEST_REFRESH_THROTTLE:
-                    setLabels();
+                case message_type.RECEIVED_REQ_STEAL: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.LOCO))
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
+
+                        String addr = bundle.getString(alert_bundle_tag_type.LOCO);
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        promptForSteal(addr, whichThrottle);
+                    }
+                    break;
+                }
+
+                case message_type.SOUNDS_FORCE_LOCO_SOUNDS_TO_START:
+                    for (int throttleIndex = 0; (throttleIndex < threaded_application.SOUND_MAX_SUPPORTED_THROTTLES) && (throttleIndex < mainapp.maxThrottlesCurrentScreen); throttleIndex++) {
+                        if(ipls!=null) ipls.doLocoSound(throttleIndex, getSpeedFromCurrentSliderPosition(throttleIndex, false), dirs[throttleIndex], soundsIsMuted[throttleIndex]);
+                    }
+                    break;
+
+                case message_type.REQUEST_REFRESH_THROTTLE: {
                     Log.d(threaded_application.applicationName, activityName + ": ThrottleMessageHandler(): REQUEST_REFRESH_THROTTLE");
+                    setLabels();
                     break;
+                }
 
-                case message_type.REFRESH_FUNCTIONS:
+                case message_type.FORCE_THROTTLE_RELOAD: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
+
+                        int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
+                        removeLoco(whichThrottle);
+                        setAllFunctionLabelsAndListeners();
+                        setAllFunctionStates(whichThrottle);
+                        enableDisableButtons(whichThrottle); // direction and slider: pass whichThrottle
+                        showHideConsistMenus();
+                    }
+                    break;
+                }
+
+                case message_type.REFRESH_FUNCTIONS: {
                     setAllFunctionLabelsAndListeners();
                     for (int throttleIndex = 0; throttleIndex < mainapp.maxThrottlesCurrentScreen; throttleIndex++) {
                         setAllFunctionStates(throttleIndex);
@@ -1053,59 +1135,76 @@ public class throttle extends AppCompatActivity implements
                         showHideConsistMenus();
                     }
                     break;
-                case message_type.ROSTER_UPDATE:
-                    setLabels();               // refresh function labels when any roster response is received
+                }
+
+                case message_type.IMPORT_SERVER_AUTO_AVAILABLE: {
+                    Log.d(threaded_application.applicationName, activityName + ": ThrottleMessageHandler(): AUTO_IMPORT_URL_AVAILABLE ");
+                    autoImportUrlAskToImport();
                     break;
-                case message_type.WIT_CON_RETRY:
-                    witRetry(response_str);
-                    break;
-                case message_type.WIT_CON_RECONNECT:
-                    break;
-                case message_type.TIME_CHANGED:
-                    setActivityTitle();
-                    break;
-                case message_type.FORCE_THROTTLE_RELOAD:
-                    try {
-                        int whichThrottle = Integer.parseInt(response_str);
-                        removeLoco(whichThrottle);
-                        setAllFunctionLabelsAndListeners();
-                        setAllFunctionStates(whichThrottle);
-                        enableDisableButtons(whichThrottle); // direction and slider: pass whichThrottle
-                        showHideConsistMenus();
-                    } catch (Exception e) {
-                        // do nothing
+                }
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.VOLUME_BUTTON_ACTION: { // volume button n another activity
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_ACTION))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_KEY_CODE))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_REPEAT_COUNT)) ) {
+
+                        threaded_application.extendedLogging(activityName + ": handleMessage(): VOLUME_BUTTON_ACTION ");
+                        int action = bundle.getInt(alert_bundle_tag_type.EVENT_ACTION);
+                        int keyCode = bundle.getInt(alert_bundle_tag_type.EVENT_KEY_CODE);
+                        int repeatCnt = bundle.getInt(alert_bundle_tag_type.EVENT_REPEAT_COUNT);
+
+                        doVolumeButtonAction(action, keyCode, repeatCnt);
                     }
                     break;
-                case message_type.RESTART_APP:
-                    startNewThrottleActivity();
-                    break;
-                case message_type.RELAUNCH_APP:
-                case message_type.SHUTDOWN:
-                    shutdown();
-                    break;
-                case message_type.DISCONNECT:
-                    disconnect();
-                    break;
-                case message_type.WEBVIEW_LOC:      // webview location changed
-                    // set new location
-                    prefWebViewLocation = prefs
-                            .getString("prefWebViewLocation", getApplicationContext().getResources().getString(R.string.prefWebViewLocationDefaultValue));
-                    keepWebViewLocation = prefWebViewLocation;
-                    webViewIsOn = false;
-                    reloadWeb();
-                    break;
-                case message_type.INITIAL_THR_WEBPAGE:
-                    initWeb();
-                    break;
-                case message_type.INITIAL_WEB_WEBPAGE:
-                    // if web activity is not open then reinit web statics for next time it is opened
-                    if (mainapp.web_msg_handler == null) {
-                        web_activity.initStatics();
+                }
+
+                case message_type.GAMEPAD_ACTION: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_ACTION))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_KEY_CODE))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_IS_SHIFTED))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_REPEAT_COUNT))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_ORIGIN)) ) {
+
+                        threaded_application.extendedLogging(activityName + ": ThrottleMessageHandler(): GAMEPAD_ACTION ");
+                        externalGamepadAction = bundle.getInt(alert_bundle_tag_type.EVENT_ACTION);
+                        externalGamepadKeyCode = bundle.getInt(alert_bundle_tag_type.EVENT_KEY_CODE);
+                        externalGamepadIsShiftPressed = bundle.getBoolean(alert_bundle_tag_type.EVENT_IS_SHIFTED);
+                        externalGamepadRepeatCnt = bundle.getInt(alert_bundle_tag_type.EVENT_REPEAT_COUNT);
+                        externalGamepadWhichGamePadIsEventFrom = bundle.getInt(alert_bundle_tag_type.EVENT_ORIGIN);
+
+                        dispatchKeyEvent(null);
                     }
                     break;
-                case message_type.REQ_STEAL:
-                    promptForSteal(msg.obj.toString(), msg.arg1);
+                }
+
+                case message_type.GAMEPAD_JOYSTICK_ACTION: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_ACTION))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_ORIGIN))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_X_AXIS))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_Y_AXIS))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_X_AXIS_2))
+                            && (bundle.containsKey(alert_bundle_tag_type.EVENT_Y_AXIS_2)) ) {
+
+                        threaded_application.extendedLogging(activityName + ": handleMessage(): GAMEPAD_JOYSTICK_ACTION ");
+                        externalGamepadAction = bundle.getInt(alert_bundle_tag_type.EVENT_ACTION);
+                        externalGamepadWhichGamePadIsEventFrom = bundle.getInt(alert_bundle_tag_type.EVENT_ORIGIN);
+                        externalGamepadXAxis = bundle.getFloat(alert_bundle_tag_type.EVENT_X_AXIS);
+                        externalGamepadYAxis = bundle.getFloat(alert_bundle_tag_type.EVENT_Y_AXIS);
+                        externalGamepadXAxis2 = bundle.getFloat(alert_bundle_tag_type.EVENT_X_AXIS_2);
+                        externalGamepadYAxis2 = bundle.getFloat(alert_bundle_tag_type.EVENT_Y_AXIS_2);
+
+                        dispatchGenericMotionEvent(null);
+                    }
                     break;
+                }
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
                 case message_type.KIDS_TIMER_ENABLE:
                     kidsTimerActions(kids_timer_action_type.ENABLED, 0);
                     break;
@@ -1113,75 +1212,70 @@ public class throttle extends AppCompatActivity implements
                     kidsTimerActions(kids_timer_action_type.STARTED, 0);
                     break;
                 case message_type.KIDS_TIMER_TICK:
-                    kidsTimerActions(kids_timer_action_type.RUNNING, msg.arg1);
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.TIMER_TICK)) ) {
+
+                        kidsTimerActions(kids_timer_action_type.RUNNING, bundle.getInt(alert_bundle_tag_type.TIMER_TICK));
+                    }
                     break;
                 case message_type.KIDS_TIMER_END:
                     kidsTimerActions(kids_timer_action_type.ENDED, 0);
                     break;
-                case message_type.IMPORT_SERVER_AUTO_AVAILABLE:
-                    Log.d(threaded_application.applicationName, activityName + ": ThrottleMessageHandler(): AUTO_IMPORT_URL_AVAILABLE " + response_str);
-                    autoImportUrlAskToImport();
-                    break;
-                case message_type.SOUNDS_FORCE_LOCO_SOUNDS_TO_START:
-                    for (int throttleIndex = 0; (throttleIndex < threaded_application.SOUND_MAX_SUPPORTED_THROTTLES) && (throttleIndex < mainapp.maxThrottlesCurrentScreen); throttleIndex++) {
-                        if(ipls!=null) ipls.doLocoSound(throttleIndex, getSpeedFromCurrentSliderPosition(throttleIndex, false), dirs[throttleIndex], soundsIsMuted[throttleIndex]);
-                    }
-                    break;
-                case message_type.GAMEPAD_ACTION:
-                    threaded_application.extendedLogging(activityName + ": ThrottleMessageHandler(): GAMEPAD_ACTION " + response_str);
-                    if (!response_str.isEmpty()) {
-                        String[] splitString = response_str.split(":");
-                        externalGamepadAction = Integer.parseInt(splitString[0]);
-//                        externalGamepadWhichThrottle = Integer.parseInt(splitString[1]);
-                        externalGamepadKeyCode = Integer.parseInt(splitString[1]);
-                        externalGamepadIsShiftPressed = (Integer.parseInt(splitString[2]) == 1);
-                        externalGamepadRepeatCnt = Integer.parseInt(splitString[3]);
-                        externalGamepadWhichGamePadIsEventFrom = Integer.parseInt(splitString[4]);
 
-                        dispatchKeyEvent(null);
-                    }
-                    break;
-                case message_type.VOLUME_BUTTON_ACTION: // volume button n another activity
-                    threaded_application.extendedLogging(activityName + ": handleMessage(): VOLUME_BUTTON_ACTION " + response_str);
-                    if (!response_str.isEmpty()) {
-                        String[] splitString = response_str.split(":");
-                        doVolumeButtonAction(Integer.parseInt(splitString[0]), Integer.parseInt(splitString[1]), Integer.parseInt(splitString[2]));
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.INITIAL_WEB_WEBPAGE:
+                    // if web activity is not open then reinit web statics for next time it is opened
+//                    if (mainapp.web_msg_handler == null) {
+                    if (mainapp.activityBundleMessageHandlers[activity_id_type.WEB] == null) {
+                        web_activity.initStatics();
                     }
                     break;
 
-                case message_type.GAMEPAD_JOYSTICK_ACTION:
-                    threaded_application.extendedLogging(activityName + ": handleMessage(): GAMEPAD_JOYSTICK_ACTION " + response_str);
-                    if (!response_str.isEmpty()) {
-                        String[] splitString = response_str.split(":");
-                        externalGamepadAction = Integer.parseInt(splitString[0]);
-                        externalGamepadWhichGamePadIsEventFrom = Integer.parseInt(splitString[1]);
-                        externalGamepadXAxis = Float.parseFloat(splitString[2]);
-                        externalGamepadYAxis = Float.parseFloat(splitString[3]);
-                        externalGamepadXAxis2 = Float.parseFloat(splitString[4]);
-                        externalGamepadYAxis2 = Float.parseFloat(splitString[5]);
-
-                        dispatchGenericMotionEvent(null);
-                    }
-                    break;
-
-                case message_type.ESTOP: // only needed for the Semi-Realistic Throttle
-                    if (isSemiRealisticThrottle) {
-                        int whichThrottle = Integer.parseInt(response_str);
-                        semiRealisticThrottleSliderPositionUpdate(whichThrottle,0);
-                        setTargetSpeed(whichThrottle, 0);
-                    }
-                    break;
-
-                case message_type.ESTOP_ONE_THROTTLE:
-                    int whichThrottle = mainapp.throttleCharToInt(response_str.charAt(0));
-                    setSpeed(whichThrottle, 0, speed_commands_from_type.BUTTONS);
-                    break;
-
-                case message_type.WEB_PORT_RECEIVED:
+                case message_type.RECEIVED_WEB_PORT:
                     if (prefs.getBoolean("prefImportServerAuto", getApplicationContext().getResources().getBoolean(R.bool.prefImportServerAutoDefaultValue))) {
                         new AutoImportFromURL();
                     }
                     break;
+
+                case message_type.WEBVIEW_LOCATION:      // webview location changed
+                    // set new location
+                    prefWebViewLocation = prefs
+                            .getString("prefWebViewLocation", getApplicationContext().getResources().getString(R.string.prefWebViewLocationDefaultValue));
+                    keepWebViewLocation = prefWebViewLocation;
+                    webViewIsOn = false;
+                    reloadWeb();
+                    break;
+
+                case message_type.INITIAL_THROTTLE_WEBPAGE:
+                    initWeb();
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.REFRESH_OVERFLOW_MENU:
+                    refreshOverflowMenu();
+                    break;
+
+                case message_type.RECEIVED_TIME_CHANGE:
+                    setActivityTitle();
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.WIT_CON_RETRY:
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.MESSAGE)) ) {
+
+                        witRetry(bundle.getString(alert_bundle_tag_type.MESSAGE));
+                    }
+                    break;
+
+                case message_type.WIT_CON_RECONNECT:
+                    // ignore
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
 
                 case message_type.REOPEN_THROTTLE:
                     // ignore
@@ -1191,6 +1285,17 @@ public class throttle extends AppCompatActivity implements
                     endThisActivity();
                     break;
 
+                case message_type.DISCONNECT:
+                    disconnect();
+                    break;
+
+                case message_type.RESTART_APP:
+                    startNewThrottleActivity();
+                    break;
+                case message_type.RELAUNCH_APP:
+                case message_type.SHUTDOWN:
+                    shutdown();
+                    break;
             }
         }
     }
@@ -1449,7 +1554,7 @@ public class throttle extends AppCompatActivity implements
                             case acceleratorometer_action_type.E_STOP:
                                 GamepadFeedbackSound(false);
                                 mainapp.sendEStopMsg();
-                                if ( (!mainapp.isDCCEX) || (!mainapp.prefDccexEmergencyStopPauseResume) ) {
+                                if ( (mainapp.isWiThrottleProtocol()) || (!mainapp.prefDccexEmergencyStopPauseResume) ) {
                                     speedUpdate(0);  // update all throttles
                                     applySpeedRelatedOptions();  // update all throttles
                                     if (IS_ESU_MCII) {
@@ -1632,7 +1737,8 @@ public class throttle extends AppCompatActivity implements
         mainapp.prefHapticFeedbackDuration = Integer.parseInt(prefs.getString("prefHapticFeedbackDuration", getResources().getString(R.string.prefHapticFeedbackDurationDefaultValue)));
         mainapp.prefHapticFeedbackButtons = prefs.getBoolean("prefHapticFeedbackButtons", getResources().getBoolean(R.bool.prefHapticFeedbackButtonsDefaultValue));
 
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.CLOCK_DISPLAY_CHANGED);
+//        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.CLOCK_DISPLAY_CHANGED);
+        mainapp.alertActivitiesWithBundle(message_type.RECEIVED_TIME_CHANGE);
 
         if (isCreate) {
             prefs.edit().putString("prefKidsTimer", PREF_KIDS_TIMER_NONE).commit();  //reset the preference
@@ -1721,7 +1827,7 @@ public class throttle extends AppCompatActivity implements
                 mainapp.esuMc2BrakeLevels[2] = tmpInt>=0 ? tmpInt : 10000;
             }
         }
-        if (mainapp.isDCCEX) {
+        if (mainapp.isDccexProtocol()) {
             mainapp.prefDccexEmergencyStopPauseResume = prefs.getBoolean("prefDccexEmergencyStopPauseResume",
                     getResources().getBoolean(R.bool.prefDccexEmergencyStopPauseResumeDefaultValue));
         }
@@ -1865,7 +1971,11 @@ public class throttle extends AppCompatActivity implements
         for (int throttleIndex = 0; throttleIndex < mainapp.maxThrottlesCurrentScreen; throttleIndex++) {
             if ((mainapp.consists != null) && (mainapp.consists[throttleIndex] != null)
                     && (mainapp.consists[throttleIndex].isActive())) {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WIT_QUERY_SPEED_AND_DIRECTION, "", throttleIndex);
+//                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WIT_QUERY_SPEED_AND_DIRECTION, "", throttleIndex);
+
+                Bundle bundle = new Bundle();
+                bundle.putInt(alert_bundle_tag_type.THROTTLE, throttleIndex);
+                mainapp.alertCommHandlerWithBundle(message_type.WIT_QUERY_SPEED_AND_DIRECTION, bundle);
             }
         }
     }
@@ -2377,7 +2487,13 @@ public class throttle extends AppCompatActivity implements
                     try {
                         if (con.isReverseOfLead(addr)) // if engine faces opposite of lead loco
                             locoDir ^= 1; // then reverse the commanded direction
-                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DIRECTION, addr, whichThrottle, locoDir);
+//                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DIRECTION, addr, whichThrottle, locoDir);
+
+                        Bundle dirBundle = new Bundle();
+                        dirBundle.putString(alert_bundle_tag_type.LOCO_TEXT, addr);
+                        dirBundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+                        dirBundle.putInt(alert_bundle_tag_type.DIRECTION, locoDir);
+                        mainapp.alertCommHandlerWithBundle(message_type.DIRECTION, dirBundle);
                     } catch (
                             Exception e) { // isReverseOfLead returns null if addr is not in con - should never happen since we are walking through consist list
                         Log.d(threaded_application.applicationName, activityName + ": " + mainapp.throttleIntToString(whichThrottle) + " direction change for unselected loco " + addr);
@@ -2525,7 +2641,7 @@ public class throttle extends AppCompatActivity implements
 
         if (((mainapp.prefAlwaysUseDefaultFunctionLabels) && (mainapp.prefConsistFollowRuleStyle.contains(consist_function_rule_style_type.SPECIAL)))
                 || (mainapp.prefOverrideWiThrottlesFunctionLatching)
-                || (mainapp.isDCCEX)
+                || (mainapp.isDccexProtocol())
         ) {
             int doPress = -1;
 //            boolean doRelease = false;
@@ -3424,7 +3540,7 @@ public class throttle extends AppCompatActivity implements
                 break;
             }
             case gamepad_or_keyboard_event_type.FUNCTION_START: {
-                if (mainapp.isDCCEX) {
+                if (mainapp.isDccexProtocol()) {
                     lastGamepadFunction = val;
                     lastGamepadFunctionIsPressed = mainapp.function_states[whichThrottle][val];
                 }
@@ -3432,7 +3548,7 @@ public class throttle extends AppCompatActivity implements
                 break;
             }
             case gamepad_or_keyboard_event_type.FUNCTION_END: {
-                if ( (mainapp.isDCCEX) && (lastGamepadFunction == val) ){
+                if ( (mainapp.isDccexProtocol()) && (lastGamepadFunction == val) ){
                     doGamepadFunction(val, (lastGamepadFunctionIsPressed ? ACTION_DOWN : ACTION_UP), isConsistActiveOnThrottle, whichThrottle, repeatCnt, true);
                 } else {
                     doGamepadFunction(val, ACTION_UP, isConsistActiveOnThrottle, whichThrottle, repeatCnt);
@@ -3453,15 +3569,30 @@ public class throttle extends AppCompatActivity implements
                 break;
             }
             case gamepad_or_keyboard_event_type.TURNOUT_TOGGLE: {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.TURNOUT, "2" + val);
+//                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.TURNOUT, "2" + val);
+
+                Bundle bundle = new Bundle();
+                bundle.putString(alert_bundle_tag_type.TURNOUT, Integer.toString(val));
+                bundle.putChar(alert_bundle_tag_type.TURNOUT_ACTION, turnout_action_type.TOGGLE);
+                mainapp.alertCommHandlerWithBundle(message_type.TURNOUT, bundle);
                 break;
             }
             case gamepad_or_keyboard_event_type.TURNOUT_THROW: {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.TURNOUT, "T" + val);
+//                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.TURNOUT, "T" + val);
+
+                Bundle bundle = new Bundle();
+                bundle.putString(alert_bundle_tag_type.TURNOUT, Integer.toString(val));
+                bundle.putChar(alert_bundle_tag_type.TURNOUT_ACTION, turnout_action_type.THROW);
+                mainapp.alertCommHandlerWithBundle(message_type.TURNOUT, bundle);
                 break;
             }
             case gamepad_or_keyboard_event_type.TURNOUT_CLOSE: {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.TURNOUT, "C" + val);
+//                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.TURNOUT, "C" + val);
+
+                Bundle bundle = new Bundle();
+                bundle.putString(alert_bundle_tag_type.TURNOUT, Integer.toString(val));
+                bundle.putChar(alert_bundle_tag_type.TURNOUT_ACTION, turnout_action_type.CLOSE);
+                mainapp.alertCommHandlerWithBundle(message_type.TURNOUT, bundle);
                 break;
             }
 
@@ -4461,23 +4592,31 @@ public class throttle extends AppCompatActivity implements
                 case FN28:
                 case FN29:
                 case FN30:
-                case FN31:
+                case FN31: {
+                    Consist con = mainapp.consists[whichThrottle];
+                    String addr = "";
+                    if (con != null) addr = con.getLeadAddr();
+
                     if (!isScreenLocked && repeatCnt == 0) {
                         if (action == ACTION_DOWN) {
-                            mainapp.sendMsg(mainapp.comm_msg_handler,
-                                    message_type.FUNCTION,
-                                    mainapp.throttleIntToString(whichThrottle),
-                                    buttonAction.getFunction(),
-                                    1);
+//                            mainapp.sendMsg(mainapp.comm_msg_handler,
+//                                    message_type.FUNCTION,
+//                                    mainapp.throttleIntToString(whichThrottle),
+//                                    buttonAction.getFunction(),
+//                                    1);
+                            mainapp.setFunction(whichThrottle, addr, buttonAction.getFunction(), 1, false);
+
                         } else {
-                            mainapp.sendMsg(mainapp.comm_msg_handler,
-                                    message_type.FUNCTION,
-                                    mainapp.throttleIntToString(whichThrottle),
-                                    buttonAction.getFunction(),
-                                    0);
+//                            mainapp.sendMsg(mainapp.comm_msg_handler,
+//                                    message_type.FUNCTION,
+//                                    mainapp.throttleIntToString(whichThrottle),
+//                                    buttonAction.getFunction(),
+//                                    0);
+                            mainapp.setFunction(whichThrottle, addr, buttonAction.getFunction(), 0, false);
                         }
                     }
                     break;
+                }
                 case NO_ACTION:
                 default:
                     // Do nothing
@@ -4945,7 +5084,8 @@ public class throttle extends AppCompatActivity implements
 
         if (forceSemiRealistic) { // only used for the Sem-Realistic Throttle - ESU Decoder Brakes
             int newFnState = (buttonPressMessageType == button_press_message_type.UP) ? 0 : 1;
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + "*", function, newFnState);
+//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + "*", function, newFnState);
+            mainapp.setFunction(whichThrottle, "*", function, buttonPressMessageType, true);
 
         } else if (tempPrefConsistFollowRuleStyle.equals(consist_function_rule_style_type.ORIGINAL)) {
 
@@ -4954,10 +5094,13 @@ public class throttle extends AppCompatActivity implements
                 addr = con.getLeadAddr();
 
             if (buttonPressMessageType == button_press_message_type.TOGGLE) {
-                mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + addr, function);
+//                mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + addr, function);
+                mainapp.toggleFunction(whichThrottle, addr, function);
             } else {
                 if ( (!mainapp.prefOverrideWiThrottlesFunctionLatching) && (!forceIsLatching) ) {
-                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, buttonPressMessageType);
+//                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, buttonPressMessageType);
+                    mainapp.setFunction(whichThrottle, addr, function, buttonPressMessageType, false);
+
                 } else {
                     boolean fnState = mainapp.function_states[whichThrottle][function];
                     int oldFnState = fnState ? 1 : 0;
@@ -4965,12 +5108,17 @@ public class throttle extends AppCompatActivity implements
 
                     if (isLatching == consist_function_latching_type.YES) {
                         if (buttonPressMessageType == button_press_message_type.UP) {
-                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, oldFnState);
-                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, newFnState);
+//                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, oldFnState);
+//                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, newFnState);
+                            mainapp.setFunction(whichThrottle, addr, function, oldFnState, true);
+                            mainapp.setFunction(whichThrottle, addr, function, newFnState, true);
+
                             mainapp.function_states[whichThrottle][function] = (newFnState==1);
                         }
                     } else {
-                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, newFnState);
+//                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, newFnState);                           }
+                        mainapp.setFunction(whichThrottle, addr, function, newFnState, true);
+
                         mainapp.function_states[whichThrottle][function] = (newFnState==1);
                     }
                 }
@@ -4981,9 +5129,11 @@ public class throttle extends AppCompatActivity implements
                     if (!l.getAddress().equals(con.getLeadAddr())) {  // ignore the lead as we have already set it
                         if (l.isLightOn() == light_follow_type.FOLLOW) {
                             if (buttonPressMessageType == button_press_message_type.TOGGLE) {
-                                mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + l.getAddress(), function);
+//                                mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + l.getAddress(), function);
+                                mainapp.toggleFunction(whichThrottle, l.getAddress(), function);
                             } else {
-                                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), function, buttonPressMessageType);
+//                                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), function, buttonPressMessageType);
+                                mainapp.setFunction(whichThrottle, l.getAddress(), function, buttonPressMessageType, false);
                             }
                         }
                     }
@@ -4996,13 +5146,17 @@ public class throttle extends AppCompatActivity implements
             int newFnState = -1;
             if (tempPrefConsistFollowRuleStyle.equals(consist_function_rule_style_type.COMPLEX)) { // if Complex, always activate the lead loco
                 if (buttonPressMessageType == button_press_message_type.TOGGLE) {
-                    mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + con.getLeadAddr(), function);
+//                    mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + con.getLeadAddr(), function);
+                    mainapp.toggleFunction(whichThrottle, con.getLeadAddr(), function);
                 } else {
-                    if (!mainapp.isDCCEX) {
-                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + con.getLeadAddr(), function, buttonPressMessageType);
+                    if (mainapp.isWiThrottleProtocol()) {
+//                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + con.getLeadAddr(), function, buttonPressMessageType);
+                        mainapp.setFunction(whichThrottle, con.getLeadAddr(), function, buttonPressMessageType, false);
+
                     } else {
                         newFnState = fnState ? 0 : 1;
-                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + con.getLeadAddr(), function, newFnState);
+//                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + con.getLeadAddr(), function, newFnState);
+                        mainapp.setFunction(whichThrottle, con.getLeadAddr(), function, newFnState, true);
                     }
                 }
             }
@@ -5028,24 +5182,33 @@ public class throttle extends AppCompatActivity implements
                             if ((tempPrefConsistFollowRuleStyle.equals(consist_function_rule_style_type.COMPLEX))
                                     || (isLatching == consist_function_latching_type.NA)) {
                                 if (buttonPressMessageType == button_press_message_type.TOGGLE) {
-                                    mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i));
+//                                    mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i));
+                                    mainapp.toggleFunction(whichThrottle, l.getAddress(), functionList.get(i));
                                 } else {
-                                    if (!mainapp.isDCCEX) {
-                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), buttonPressMessageType);
+                                    if (mainapp.isWiThrottleProtocol()) {
+//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), buttonPressMessageType);
+                                        mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), buttonPressMessageType, false);
+
                                     } else {
-                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), newFnState);
+//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), newFnState);
+                                        mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), buttonPressMessageType, true);
                                     }
                                 }
                             } else {
                                 if ((isLatching == consist_function_latching_type.YES) && (buttonPressMessageType == button_press_message_type.UP)) {
-                                    if (!mainapp.isDCCEX) {
-                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), button_press_message_type.DOWN);
-                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), button_press_message_type.UP);
+                                    if (mainapp.isWiThrottleProtocol()) {
+//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), button_press_message_type.DOWN);
+//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), button_press_message_type.UP);
+                                        mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), button_press_message_type.DOWN, false);
+                                        mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), button_press_message_type.UP, false);
+
                                     } else {
-                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), newFnState);
+//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), newFnState);
+                                        mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), newFnState, false);
                                     }
                                 } else if (isLatching == consist_function_latching_type.NO) {
-                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), buttonPressMessageType);
+//                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), buttonPressMessageType);
+                                    mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), buttonPressMessageType, false);
                                 }
                             }
                         }
@@ -5326,7 +5489,11 @@ public class throttle extends AppCompatActivity implements
         // start timer to briefly ignore WiT speed messages - avoids speed "jumping"
         changeTimers[whichThrottle].pacingDelay();
         // send speed update to WiT
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.VELOCITY, "", whichThrottle, speed);
+//        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.VELOCITY, "", whichThrottle, speed);
+        Bundle speedBundle = new Bundle();
+        speedBundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+        speedBundle.putInt(alert_bundle_tag_type.SPEED, speed);
+        mainapp.alertCommHandlerWithBundle(message_type.VELOCITY, speedBundle);
     }
 
     // implement general purpose pacing delay class
@@ -5345,10 +5512,10 @@ public class throttle extends AppCompatActivity implements
         }
 
         protected void pacingDelay() {
-            if (mainapp.throttle_msg_handler == null) return;
-            mainapp.throttle_msg_handler.removeCallbacks(delayTimer);          //remove any pending requests
+            if (mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] == null) return;
+            mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE].removeCallbacks(delayTimer);          //remove any pending requests
             delayInProg = true;
-            mainapp.throttle_msg_handler.postDelayed(delayTimer, delay);
+            mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE].postDelayed(delayTimer, delay);
         }
 
         protected class DelayTimer implements Runnable {
@@ -5472,7 +5639,7 @@ public class throttle extends AppCompatActivity implements
                         webView.setInitialScale((int) (100 * scale)); // restore scale
                     } else {
                         setImmersiveMode(webView);
-                        if (mainapp.throttle_msg_handler != null) {
+                        if (mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] != null) {
                             mainapp.checkExit(throttle.this);
                         } else { // something has gone wrong and the activity did not shut down properly so force it
                             shutdown();
@@ -5529,9 +5696,12 @@ public class throttle extends AppCompatActivity implements
 
         mainapp.throttleSwitchAllowed = false; // used to prevent throttle switches until the previous onStart() completes
 
+        if (gestureHandler == null)
+            gestureHandler = new GestureHandler(Looper.getMainLooper());
+
         // put pointer to this activity's handler in main app's shared variable
-        if (mainapp.throttle_msg_handler == null)
-            mainapp.throttle_msg_handler = new ThrottleMessageHandler(Looper.getMainLooper());
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] = new BundleMessageHandler(Looper.getMainLooper());
 
         // if it was killed in background, clear the save preferences
         if ( (prefs.getBoolean("prefForcedRestart", false))
@@ -5665,10 +5835,12 @@ public class throttle extends AppCompatActivity implements
         }
 
         if (((prefKidsTime > 0) && (kidsTimerRunning != kids_timer_action_type.RUNNING))) {
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_ENABLE, "", 0, 0);
+//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_ENABLE, "", 0, 0);
+            mainapp.alertActivitiesWithBundle(message_type.KIDS_TIMER_ENABLE, activity_id_type.THROTTLE);
         } else {
             if (kidsTimerRunning == kids_timer_action_type.ENDED) {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_END, "", 0, 0);
+//                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.KIDS_TIMER_END, "", 0, 0);
+                mainapp.alertActivitiesWithBundle(message_type.KIDS_TIMER_END, activity_id_type.THROTTLE);
             }
 
             if (prefKidsTimer.equals(PREF_KIDS_TIMER_NONE)) {
@@ -6185,10 +6357,10 @@ public class throttle extends AppCompatActivity implements
 
             boolean isSpecial = (mainapp.prefAlwaysUseDefaultFunctionLabels)
                     && (mainapp.prefConsistFollowRuleStyle.contains(consist_function_rule_style_type.SPECIAL));
-//            overflowMenu.findItem(R.id.function_consist_settings_mnu).setVisible(isSpecial || mainapp.isDCCEX);
+//            overflowMenu.findItem(R.id.function_consist_settings_mnu).setVisible(isSpecial || mainapp.isDccexProtocol());
             overflowMenu.findItem(R.id.function_consist_settings_mnu).setVisible(true);
             if (!isSpecial) {
-                if (mainapp.isDCCEX) {
+                if (mainapp.isDccexProtocol()) {
                     overflowMenu.findItem(R.id.function_consist_settings_mnu).setTitle(R.string.dccExFunctionSettings);
                 } else {
                     overflowMenu.findItem(R.id.function_consist_settings_mnu).setVisible(mainapp.prefOverrideWiThrottlesFunctionLatching);
@@ -6286,13 +6458,15 @@ public class throttle extends AppCompatActivity implements
             repeatUpdateHandler = null;
         }
 
-        if (mainapp.throttle_msg_handler != null) {
-            mainapp.throttle_msg_handler.removeCallbacks(gestureStopped);
-            mainapp.throttle_msg_handler.removeCallbacksAndMessages(null);
-            mainapp.throttle_msg_handler = null;
+        if (gestureHandler != null) {
+            gestureHandler.removeCallbacks(gestureStopped);
+            gestureHandler.removeCallbacksAndMessages(null);
+            gestureHandler = null;
         } else {
-            Log.d(threaded_application.applicationName, activityName + ": onDestroy(): mainapp.throttle_msg_handler is null. Unable to removeCallbacksAndMessages");
+            Log.d(threaded_application.applicationName, activityName + ": onDestroy(): gestureHandler is null. Unable to removeCallbacksAndMessages");
         }
+
+        mainapp.clearActivityBundleMessageHandler(activity_id_type.THROTTLE);
 
         if (volumeKeysRepeatUpdateHandler != null) {
             volumeKeysRepeatUpdateHandler.removeCallbacks(gestureStopped);
@@ -6303,6 +6477,7 @@ public class throttle extends AppCompatActivity implements
             gamepadRepeatUpdateHandler.removeCallbacksAndMessages(null);
             gamepadRepeatUpdateHandler = null;
         }
+
         if (IS_ESU_MCII) {
             esuMc2Led.setState(EsuMc2Led.RED, EsuMc2LedState.OFF);
             esuMc2Led.setState(EsuMc2Led.GREEN, EsuMc2LedState.OFF);
@@ -6699,7 +6874,12 @@ public class throttle extends AppCompatActivity implements
     void releaseLoco(int whichThrottle) {
         mainapp.storeThrottleLocosForReleaseDCCEX(whichThrottle);
         mainapp.consists[whichThrottle].release();
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.RELEASE, "", whichThrottle); // pass T, S or G in message
+//        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.RELEASE, "", whichThrottle); // pass T, S or G in message
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+        bundle.putString(alert_bundle_tag_type.LOCO_TEXT,"");
+        mainapp.alertCommHandlerWithBundle(message_type.RELEASE, bundle);
     }
 
     @Override
@@ -6787,7 +6967,8 @@ public class throttle extends AppCompatActivity implements
             b.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int id) {
                     threaded_application.activityInTransition(activityName);
-                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DISCONNECT, "");
+//                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DISCONNECT, "");
+                    mainapp.alertCommHandlerWithBundle(message_type.DISCONNECT);
                     final Handler handler = new Handler(Looper.getMainLooper());
                     handler.postDelayed(new Runnable() {
                         @Override
@@ -6833,7 +7014,7 @@ public class throttle extends AppCompatActivity implements
 
         } else if (item.getItemId() == R.id.emergency_stop_button) {
             mainapp.sendEStopMsg();
-            if ( (!mainapp.isDCCEX) || (!mainapp.prefDccexEmergencyStopPauseResume) ) {
+            if ( (mainapp.isWiThrottleProtocol()) || (!mainapp.prefDccexEmergencyStopPauseResume) ) {
                 speedUpdate(0);  // update all throttles
                 applySpeedRelatedOptions();  // update all throttles
                 if (IS_ESU_MCII && !isSemiRealisticThrottle) {
@@ -7014,6 +7195,13 @@ public class throttle extends AppCompatActivity implements
         return super.dispatchTouchEvent(ev);
     }
 
+    static class GestureHandler extends Handler {
+
+        public GestureHandler(Looper looper) {
+            super(looper);
+        }
+    }
+
     @Override
     public void onGesture(GestureOverlayView arg0, MotionEvent event) {
         gestureMove(event);
@@ -7076,9 +7264,8 @@ public class throttle extends AppCompatActivity implements
         mVelocityTracker.clear();
 
         // start the gesture timeout timer
-        if (mainapp.throttle_msg_handler != null) {
-//            Log.d(threaded_application.applicationName, activityName + ": gestureStart(): start gesture timer");
-            mainapp.throttle_msg_handler.postDelayed(gestureStopped, gestureCheckRate);
+        if (gestureHandler != null) {
+            gestureHandler.postDelayed(gestureStopped, gestureCheckRate);
         } else {
             Log.d(threaded_application.applicationName, activityName + ": gestureStart(): Can't start gesture timer");
         }
@@ -7088,8 +7275,8 @@ public class throttle extends AppCompatActivity implements
 //        Log.d(threaded_application.applicationName, activityName + ": gestureMove(): action " + event.getAction() + " eventTime: " + event.getEventTime() );
         if (gestureInProgress) {
             // stop the gesture timeout timer
-            if (mainapp.throttle_msg_handler != null)
-                mainapp.throttle_msg_handler.removeCallbacks(gestureStopped);
+            if (gestureHandler != null)
+                gestureHandler.removeCallbacks(gestureStopped);
 
             mVelocityTracker.addMovement(event);
             if ((event.getEventTime() - gestureLastCheckTime) > gestureCheckRate) {
@@ -7111,16 +7298,16 @@ public class throttle extends AppCompatActivity implements
             if (gestureInProgress) {
                 // restart the gesture timeout timer
 //                Log.d(threaded_application.applicationName, activityName + ": gestureMove(): restart gesture timer");
-                if (mainapp.throttle_msg_handler != null)
-                    mainapp.throttle_msg_handler.postDelayed(gestureStopped, gestureCheckRate);
+                if (gestureHandler != null)
+                    gestureHandler.postDelayed(gestureStopped, gestureCheckRate);
             }
         }
     }
 
     private void gestureEnd(MotionEvent event) {
 //        Log.d(threaded_application.applicationName, activityName + ": gestureEnd(): action " + event.getAction() + " inProgress? " + gestureInProgress);
-        if ((mainapp != null) && (mainapp.throttle_msg_handler != null) && (gestureInProgress)) {
-            mainapp.throttle_msg_handler.removeCallbacks(gestureStopped);
+        if ((mainapp != null) && (gestureHandler != null) && (gestureInProgress)) {
+            gestureHandler.removeCallbacks(gestureStopped);
 
             float deltaX = (event.getX() - gestureStartX);
             float deltaY = (event.getY() - gestureStartY);
@@ -7213,8 +7400,8 @@ public class throttle extends AppCompatActivity implements
 
     private void gestureCancel(MotionEvent event) {
 //        Log.d(threaded_application.applicationName, activityName + ": gestureEnd(): gestureCancel");
-        if (mainapp.throttle_msg_handler != null)
-            mainapp.throttle_msg_handler.removeCallbacks(gestureStopped);
+        if (gestureHandler != null)
+            gestureHandler.removeCallbacks(gestureStopped);
         gestureInProgress = false;
         gestureFailed = true;
     }
@@ -7278,7 +7465,11 @@ public class throttle extends AppCompatActivity implements
         b.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() { //if yes pressed, tell ta to proceed with steal
             public void onClick(DialogInterface dialog, int id) {
                 mainapp.exitDoubleBackButtonInitiated = 0;
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.STEAL, addr, whichThrottle);
+//                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.STEAL, addr, whichThrottle);
+                Bundle dirBundle = new Bundle();
+                dirBundle.putString(alert_bundle_tag_type.LOCO_TEXT, addr);
+                dirBundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+                mainapp.alertCommHandlerWithBundle(message_type.STEAL, dirBundle);
                 stealPromptActive = false;
                 mainapp.buttonVibration();
             }
@@ -7532,7 +7723,7 @@ public class throttle extends AppCompatActivity implements
                 input.close();
 
                 prefs.edit().putString("prefPreferencesImportFileName", urlPreferencesFilePath).commit();
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.IMPORT_SERVER_AUTO_AVAILABLE, "", 0);
+                mainapp.alertActivitiesWithBundle(message_type.IMPORT_SERVER_AUTO_AVAILABLE, activity_id_type.THROTTLE);
 
             } catch (Exception e) {
                 Log.e(threaded_application.applicationName, activityName + ": Auto import preferences from Server Failed: " + e.getMessage());
@@ -7598,7 +7789,8 @@ public class throttle extends AppCompatActivity implements
         Message msg = Message.obtain();
         msg.what = message_type.RESTART_APP;
         msg.arg1 = forcedRestartReason;
-        mainapp.comm_msg_handler.sendMessage(msg);
+//        mainapp.comm_msg_handler.sendMessage(msg);
+        mainapp.commBundleMessageHandler.sendMessage(msg);
     }
 
     @SuppressLint("ApplySharedPref")
@@ -7607,10 +7799,14 @@ public class throttle extends AppCompatActivity implements
 
         this.finish();
         connection_activity.overridePendingTransition(this, R.anim.fade_in, R.anim.fade_out);
-        Message msg = Message.obtain();
-        msg.what = message_type.RELAUNCH_APP;
-        msg.arg1 = forcedRestartReason;
-        mainapp.comm_msg_handler.sendMessage(msg);
+//        Message msg = Message.obtain();
+//        msg.what = message_type.RELAUNCH_APP;
+//        msg.arg1 = forcedRestartReason;
+//        mainapp.comm_msg_handler.sendMessage(msg);
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.RESTART_REASON, forcedRestartReason);
+        mainapp.alertCommHandlerWithBundle(message_type.RELAUNCH_APP, bundle);
 
     }
 

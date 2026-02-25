@@ -234,8 +234,49 @@
         <item>dieselNW2</item>
     </string-array>
 
+    <array name="loco_sounds_ids">
+        <item>0</item>
+        <item>@array/loco_sounds_steam</item>
+        <item>@array/loco_sounds_steamSlow</item>
+        <item>@array/loco_sounds_steamClass64</item>
+        <item>@array/loco_sounds_steamClass94</item>
+        <item>@array/loco_sounds_diesel645turbo</item>
+        <item>@array/loco_sounds_diesel7FDL</item>
+        <item>@array/loco_sounds_dieselNW2</item>
+    </array>
+    <array name="loco_sounds_horn_ids">
+        <item>0</item>
+        <item>@array/locoSoundsHorn_steam</item>
+        <item>@array/locoSoundsHorn_steamSlow</item>
+        <item>@array/locoSoundsHorn_steamClass64</item>
+        <item>@array/locoSoundsHornShort_steamClass64</item>
+        <item>@array/locoSoundsHorn_steamClass94</item>
+        <item>@array/locoSoundsHorn_diesel645turbo</item>
+        <item>@array/locoSoundsHorn_diesel7FDL</item>
+        <item>@array/locoSoundsHorn_dieselNW2</item>
+    </array>
+    <array name="loco_sounds_horn_short_ids">
+        <item>0</item>
+        <item>@array/locoSoundsHornShort_steam</item>
+        <item>@array/locoSoundsHornShort_steamSlow</item>
+        <item>@array/locoSoundsHornShort_steamClass64</item>
+        <item>@array/locoSoundsHornShort_steamClass94</item>
+        <item>@array/locoSoundsHornShort_diesel645turbo</item>
+        <item>@array/locoSoundsHornShort_diesel7FDL</item>
+        <item>@array/locoSoundsHornShort_dieselNW2</item>
+    </array>
+    <array name="loco_sounds_bell_ids">
+        <item>0</item>
+        <item>@array/locoSoundsBell_steam</item>
+        <item>@array/locoSoundsBell_steamSlow</item>
+        <item>@array/locoSoundsBell_steamClass64</item>
+        <item>@array/locoSoundsBell_steamClass94</item>
+        <item>@array/locoSoundsBell_diesel645turbo</item>
+        <item>@array/locoSoundsBell_diesel7FDL</item>
+        <item>@array/locoSoundsBell_dieselNW2</item>
+    </array>
 
-    <string-array name="locoSounds_steam" translatable="false">  <!-- DO NOT TRANSLATE -->
+    <string-array name="loco_sounds_steam" translatable="false" tools:ignore="UnusedResources">  <!-- DO NOT TRANSLATE -->
         <item>steam_loco_stationary_med</item>  // 0 idle
         <item>steam_piston_stroke3</item>       // 1
         <item>steam_loop_30rpm</item>           // 2
@@ -277,7 +318,7 @@
     </string-array>
 
 
-    <string-array name="locoSounds_steamSlow" translatable="false">  <!-- DO NOT TRANSLATE -->
+    <string-array name="loco_sounds_steamSlow" translatable="false">  <!-- DO NOT TRANSLATE -->
         <item>steam_loco_stationary_med</item>  // 0 idle
         <item>steam_piston_stroke3</item>  // 1
         <item>steam_loop_30rpm</item>  // 2
@@ -319,7 +360,7 @@
     </string-array>
 
 
-    <string-array name="locoSounds_steamClass64" translatable="false">  <!-- DO NOT TRANSLATE -->
+    <string-array name="loco_sounds_steamClass64" translatable="false">  <!-- DO NOT TRANSLATE -->
         <item>steam_class64_idle_sound</item>  // 0 idle
         <item>steam_class64_chuff1_1_4</item>  // 1
         <item>steam_class64_chuff2_1_4</item>  // 2
@@ -361,7 +402,7 @@
     </string-array>
 
 
-    <string-array name="locoSounds_steamClass94" translatable="false">  <!-- DO NOT TRANSLATE -->
+    <string-array name="loco_sounds_steamClass94" translatable="false">  <!-- DO NOT TRANSLATE -->
         <item>steam_class94_idle2a</item>  // 0 idle
         <item>steam_class94_speed0a_1_4</item>  // 1
         <item>steam_class94_speed2g_1_4</item>  // 2
@@ -403,7 +444,7 @@
     </string-array>
 
 
-    <string-array name="locoSounds_diesel645turbo" translatable="false">  <!-- DO NOT TRANSLATE -->
+    <string-array name="loco_sounds_diesel645turbo" translatable="false">  <!-- DO NOT TRANSLATE -->
         <item>diesel_645turbo_idle</item>  // 0 idle
         <item>diesel_645turbo_d1k</item>  // 1
         <item>diesel_645turbo_d2</item>  // 2
@@ -445,7 +486,7 @@
     </string-array>
 
 
-    <string-array name="locoSounds_diesel7FDL" translatable="false">  <!-- DO NOT TRANSLATE -->
+    <string-array name="loco_sounds_diesel7FDL" translatable="false">  <!-- DO NOT TRANSLATE -->
         <item>diesel_7fdl_idle_1a</item>  // 0 idle
         <item>diesel_7fdl_idle_2a</item>  // 1
         <item>diesel_7fdl_idle_3a</item>  // 2
@@ -487,7 +528,7 @@
     </string-array>
 
 
-    <string-array name="locoSounds_dieselNW2" translatable="false">  <!-- DO NOT TRANSLATE -->
+    <string-array name="loco_sounds_dieselNW2" translatable="false">  <!-- DO NOT TRANSLATE -->
         <item>diesel_nw7_motor</item>  // 0 idle
         <item>diesel_nw7_motor_2</item>  // 1
         <item>diesel_nw7_motor_1</item>  // 2
@@ -3339,6 +3380,5 @@
         <item>@id/dccex_track_id_6</item>
         <item>@id/dccex_track_id_7</item>
     </array>
-
 
 </resources>

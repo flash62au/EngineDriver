@@ -91,6 +91,7 @@ import java.util.Objects;
 
 import eu.esu.mobilecontrol2.sdk.MobileControl2;
 import jmri.enginedriver.type.activity_id_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.dccex_protocol_option_type;
 import jmri.enginedriver.type.message_type;
 import jmri.enginedriver.type.auto_import_export_option_type;
@@ -209,9 +210,13 @@ public class connection_activity extends AppCompatActivity implements Permission
 //
 //    //Request connection to the WiThrottle server.
 //    private void connectImpl() {
-        //	  sendMsgErr(0, message_type.CONNECT, connected_hostip, connected_port, "ERROR in ca.connect: comm thread not started.");
+
         threaded_application.extendedLogging(activityName + ": connect()");
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.CONNECT, connected_hostip, connected_port);
+
+        Bundle bundle = new Bundle();
+        bundle.putString(alert_bundle_tag_type.IP_ADDRESS, connected_hostip);
+        bundle.putInt(alert_bundle_tag_type.PORT, connected_port);
+        mainapp.alertCommHandlerWithBundle(message_type.CONNECT, bundle);
     }
 
 
@@ -226,10 +231,8 @@ public class connection_activity extends AppCompatActivity implements Permission
     private void startNewConnectionActivity() {
         // first remove old handler since the new Intent will have its own
         isRestarting = true;        // tell OnDestroy to skip this step since it will run after the new Intent is created
-        if (mainapp.connection_msg_handler != null) {
-            mainapp.connection_msg_handler.removeCallbacksAndMessages(null);
-            mainapp.connection_msg_handler = null;
-        }
+
+        mainapp.clearActivityBundleMessageHandler(activity_id_type.CONNECTION);
 
         threaded_application.activityInTransition(activityName);
         //end current CA Intent then start the new Intent
@@ -413,66 +416,103 @@ public class connection_activity extends AppCompatActivity implements Permission
         }
     }
 
-    //Handle messages from the communication thread back to the UI thread.
-    @SuppressLint("HandlerLeak")
-    private class ui_handler extends Handler {
+    private class BundleMessageHandler extends Handler {
 
-        public ui_handler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
+        @Override
         public void handleMessage(Message msg) {
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+            Bundle bundle = msg.getData();
+
             switch (msg.what) {
-                case message_type.SERVICE_RESOLVED:
-                    HashMap<String, String> hm = (HashMap<String, String>) msg.obj;  //payload is already a hashmap
-                    String found_host_name = hm.get("host_name");
-                    String found_ip_address = hm.get("ip_address");
-                    String found_port = hm.get("port");
-                    String found_service_type = hm.get("service_type");
-                    boolean entryExists = false;
-
-                    //stop if new address is already in the list
-                    HashMap<String, String> tm;
-                    for (int index = 0; index < discovery_list.size(); index++) {
-                        tm = discovery_list.get(index);
-//                        if (tm.get("host_name").equals(found_host_name)) {
-                        if ( (tm.get("ip_address").equals(found_ip_address))
-                                && (tm.get("port").equals(found_port)) ) {
-                            entryExists = true;
-                            break;
-                        }
-                    }
-                    if (!entryExists) {                // if new host, add to discovered list on screen
-                        discovery_list.add(hm);
-                        discovery_list_adapter.notifyDataSetChanged();
-
-                        if (prefs.getBoolean("prefConnectToFirstServer", false)) {
-                            connectA();
-                        }
-
-                        String prefAutoServerNamedConnect = prefs.getString("prefAutoServerNamedConnect","").toLowerCase();
-                        if ( (!prefAutoServerNamedConnect.isEmpty()) && (found_host_name != null) && (found_host_name.toLowerCase().equals(prefAutoServerNamedConnect)) ) {
-                            connectA();
-                        }
-                    }
+                case message_type.RESTART_APP:
+                    startNewConnectionActivity();
                     break;
 
-                case message_type.SERVICE_REMOVED:
-                    //look for name in list
-                    String removed_host_name = msg.obj.toString();
-                    for (int index = 0; index < discovery_list.size(); index++) {
-                        tm = discovery_list.get(index);
-                        if (tm.get("host_name").equals(removed_host_name)) {
-                            discovery_list.remove(index);
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.REFRESH_OVERFLOW_MENU:
+                    refreshOverflowMenu();
+                    break;
+
+                case message_type.REOPEN_THROTTLE:
+                    //ignore
+                    break;
+
+
+                case message_type.SERVICE_RESOLVED: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.HOST_NAME))
+                            && (bundle.containsKey(alert_bundle_tag_type.IP_ADDRESS))
+                            && (bundle.containsKey(alert_bundle_tag_type.PORT))
+                            && (bundle.containsKey(alert_bundle_tag_type.SSID))
+                            && (bundle.containsKey(alert_bundle_tag_type.SERVICE_TYPE)) ) {
+
+                        String found_host_name = bundle.getString(alert_bundle_tag_type.HOST_NAME);
+                        String found_ip_address = bundle.getString(alert_bundle_tag_type.IP_ADDRESS);
+                        String found_port = bundle.getString(alert_bundle_tag_type.PORT);
+                        String found_ssid = bundle.getString(alert_bundle_tag_type.SSID);
+                        String found_service_type = bundle.getString(alert_bundle_tag_type.SERVICE_TYPE);
+                        boolean entryExists = false;
+
+                        //stop if new address is already in the list
+                        HashMap<String, String> tm;
+                        for (int index = 0; index < discovery_list.size(); index++) {
+                            tm = discovery_list.get(index);
+                            if ((tm != null)
+                                    && (tm.get("ip_address").equals(found_ip_address))
+                                    && (tm.get("port").equals(found_port))) {
+                                entryExists = true;
+                                break;
+                            }
+                        }
+                        if (!entryExists) {                // if new host, add to discovered list on screen
+                            HashMap<String, String> hm = new HashMap<>();
+                            hm.put("ip_address", found_ip_address);
+                            hm.put("port", found_port);
+                            hm.put("host_name", found_host_name);
+                            hm.put("ssid", found_ssid);
+                            hm.put("service_type", found_service_type);
+
+                            discovery_list.add(hm);
                             discovery_list_adapter.notifyDataSetChanged();
-                            break;
+
+                            if (prefs.getBoolean("prefConnectToFirstServer", false)) {
+                                connectA();
+                            }
+
+                            String prefAutoServerNamedConnect = prefs.getString("prefAutoServerNamedConnect", "").toLowerCase();
+                            if ((!prefAutoServerNamedConnect.isEmpty()) && (found_host_name != null) && (found_host_name.toLowerCase().equals(prefAutoServerNamedConnect))) {
+                                connectA();
+                            }
                         }
                     }
                     break;
+                }
+                case message_type.SERVICE_REMOVED: {
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.SERVICE)) ) {
 
-                case message_type.CONNECTED:
+                        //look for name in list
+                        String removed_host_name = bundle.getString(alert_bundle_tag_type.SERVICE);
+                        HashMap<String, String> tm;
+                        for (int index = 0; index < discovery_list.size(); index++) {
+                            tm = discovery_list.get(index);
+                            if (tm.get("host_name").equals(removed_host_name)) {
+                                discovery_list.remove(index);
+                                discovery_list_adapter.notifyDataSetChanged();
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+                case message_type.CONNECTED: {
                     //use asynctask to save the updated connections list to the connections_list.txt file
-//                        new saveConnectionsList().execute();
                     importExportConnectionList.saveConnectionsListExecute(mainapp, connected_hostip,
                             connected_hostname, connected_port, "", mainapp.client_ssid, connected_serviceType);
                     mainapp.connectedHostName = connected_hostname;
@@ -485,31 +525,20 @@ public class connection_activity extends AppCompatActivity implements Permission
 
                     start_throttle_activity();
                     break;
-
-                case message_type.REFRESH_OVERFLOW_MENU:
-                    refreshOverflowMenu();
-                    break;
-
-                case message_type.REOPEN_THROTTLE:
-                    //ignore
-                    break;
-
-                case message_type.RESTART_APP:
-                    startNewConnectionActivity();
-                    break;
-
-                case message_type.RELAUNCH_APP:
-                case message_type.SHUTDOWN:
-                    writeSharedPreferencesToFile();
-                    mainapp.connectedHostName = "";
-                    shutdown();
-                    break;
-
-                case message_type.DISCONNECT:
+                }
+                case message_type.DISCONNECT: {
                     writeSharedPreferencesToFile();
                     mainapp.connectedHostName = "";
                     disconnect();
                     break;
+                }
+                case message_type.RELAUNCH_APP:
+                case message_type.SHUTDOWN: {
+                    writeSharedPreferencesToFile();
+                    mainapp.connectedHostName = "";
+                    shutdown();
+                    break;
+                }
             }
         }
     }
@@ -524,7 +553,9 @@ public class connection_activity extends AppCompatActivity implements Permission
         //    timestamp = SystemClock.uptimeMillis();
         Log.d(threaded_application.applicationName, activityName + ": onCreate()");
         mainapp = (threaded_application) this.getApplication();
-        mainapp.connection_msg_handler = new ui_handler(Looper.getMainLooper());
+
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.CONNECTION] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.CONNECTION] = new BundleMessageHandler(Looper.getMainLooper());
 
         mainapp.connectedHostName = "";
         mainapp.connectedHostip = "";
@@ -760,7 +791,7 @@ public class connection_activity extends AppCompatActivity implements Permission
             return;
         }
         // in case the app was restarted by Android after being killed in background
-        mainapp.alert_activities(message_type.TERMINATE_ALL_ACTIVITIES_BAR_CONNECTION, "");
+        mainapp.alertActivitiesWithBundle(message_type.TERMINATE_ALL_ACTIVITIES_BAR_CONNECTION);
 
         mainapp.exitDoubleBackButtonInitiated = 0;
 //        if (this.runIntro) {        //if going to run the intro, expedite it
@@ -780,7 +811,13 @@ public class connection_activity extends AppCompatActivity implements Permission
         mainapp.setActivityOrientation(this);  //set screen orientation based on prefs
         //start up server discovery listener
         //	    sendMsgErr(0, message_type.SET_LISTENER, "", 1, "ERROR in ca.onResume: comm thread not started.") ;
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.SET_LISTENER, "", 1);
+//        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.SET_LISTENER, "", 1);
+        mainapp.sendMsg(mainapp.commBundleMessageHandler, message_type.SET_LISTENER, "", 1);
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.ON_OFF, 1);
+        mainapp.alertCommHandlerWithBundle(message_type.SET_LISTENER, bundle);
+
         //populate the ListView with the recent connections
         getConnectionsList();
         set_labels();
@@ -788,7 +825,11 @@ public class connection_activity extends AppCompatActivity implements Permission
         //start up server discovery listener again (after a 1 second delay)
         //TODO: this is a rig, figure out why this is needed for ubuntu servers
         //	    sendMsgErr(1000, message_type.SET_LISTENER, "", 1, "ERROR in ca.onResume: comm thread not started.") ;
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.SET_LISTENER, "", 1);
+//        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.SET_LISTENER, "", 1);
+
+        bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.ON_OFF, 1);
+        mainapp.alertCommHandlerWithBundle(message_type.SET_LISTENER, bundle);
 
         if (prefs.getBoolean("prefConnectToFirstServer", false)) {
             connectA();
@@ -814,7 +855,11 @@ public class connection_activity extends AppCompatActivity implements Permission
         super.onStop();
         Log.d(threaded_application.applicationName, activityName + ": onStop()");
         //shutdown server discovery listener
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.SET_LISTENER, "", 0);
+//        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.SET_LISTENER, "", 0);
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.ON_OFF, 0);
+        mainapp.alertCommHandlerWithBundle(message_type.SET_LISTENER, bundle);
     }
 
     @Override
@@ -823,12 +868,7 @@ public class connection_activity extends AppCompatActivity implements Permission
         super.onDestroy();
 
         if (!isRestarting) {
-            if (mainapp.connection_msg_handler != null) {
-                mainapp.connection_msg_handler.removeCallbacksAndMessages(null);
-                mainapp.connection_msg_handler = null;
-            } else {
-                Log.d(threaded_application.applicationName, activityName + ": onDestroy(): mainapp.connection_msg_handler is null. Unable to removeCallbacksAndMessages");
-            }
+            mainapp.clearActivityBundleMessageHandler(activity_id_type.CONNECTION);
         } else {
             isRestarting = false;
         }
@@ -1436,7 +1476,7 @@ public class connection_activity extends AppCompatActivity implements Permission
     void checkIfDccexServerName(String serverName, int serverPort) {
         mainapp.prefUseDccexProtocol = prefs.getString("prefUseDccexProtocol", mainapp.getResources().getString(R.string.prefUseDccexProtocolDefaultValue));
 
-        mainapp.isDCCEX = ( (mainapp.prefUseDccexProtocol.equals(dccex_protocol_option_type.AUTO))
+        mainapp.setIsDccexProtocol( (mainapp.prefUseDccexProtocol.equals(dccex_protocol_option_type.AUTO))
                 && ((serverName.matches("\\S*(DCCEX|dccex|DCC-EX|dcc-ex)\\S*")) || (serverPort==2560)) );
     }
 

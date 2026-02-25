@@ -54,6 +54,7 @@ import java.util.Date;
 import java.util.Objects;
 
 import jmri.enginedriver.type.activity_id_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.message_type;
 import jmri.enginedriver.util.LocaleHelper;
 
@@ -130,60 +131,63 @@ public class withrottle_cv_programmer extends AppCompatActivity {
 
     //**************************************
 
+    private class BundleMessageHandler extends Handler {
 
-    //Handle messages from the communication thread back to this thread (responses from withrottle)
-    @SuppressLint("HandlerLeak")
-    class withrottle_cv_programmer_handler extends Handler {
-
-        public withrottle_cv_programmer_handler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
+        @Override
         public void handleMessage(Message msg) {
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+            Bundle bundle = msg.getData();
+
             switch (msg.what) {
-                case message_type.WRITE_DIRECT_DCC_COMMAND_ECHO:  // informational response
-//                    displayCommands(msg.obj.toString(), false);
-                    displayCommands(msg.obj.toString());
-                    refreshWitCommandsView();
+                case message_type.RECEIVED_POWER_STATE_CHANGE:
+                    if (overflowMenu != null)
+                        mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
                     break;
+
+                case message_type.RECEIVED_DCCEX_ESTOP_PAUSED:
+                case message_type.RECEIVED_DCCEX_ESTOP_RESUMED:
+                    if (overflowMenu != null)
+                        mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                    break;
+
+                case message_type.WRITE_DIRECT_DCC_COMMAND_ECHO:  // informational response
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.COMMAND))) {
+
+                        displayCommands(bundle.getString(alert_bundle_tag_type.COMMAND));
+                        refreshWitCommandsView();
+                    }
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.REFRESH_OVERFLOW_MENU:
+                    refreshOverflowMenu();
+                    break;
+
+                case message_type.WIT_CON_RECONNECT:
+                    refreshWitView();
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.WIT_CON_RETRY:
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.MESSAGE))) {
+
+                        witRetry(bundle.getString(alert_bundle_tag_type.MESSAGE));
+                    }
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
 
                 case message_type.REOPEN_THROTTLE:
                     if (threaded_application.currentActivity == activity_id_type.WITHROTTLE_CV_PROGRAMMER)
                         finish();
-                    break;
-
-                case message_type.WIT_CON_RETRY:
-                    witRetry(msg.obj.toString());
-                    break;
-                case message_type.WIT_CON_RECONNECT:
-                    refreshWitView();
-                    break;
-                case message_type.RESTART_APP:
-                case message_type.RELAUNCH_APP:
-                case message_type.SHUTDOWN:
-                    shutdown();
-                    break;
-                case message_type.DISCONNECT:
-                    disconnect();
-                    break;
-                case message_type.RESPONSE:    //handle messages from WiThrottle server
-                    String s = msg.obj.toString();
-                    if (s.length() >= 3) {
-                        String com1 = s.substring(0, 3);
-                        //update power icon
-                        if ("PPA".equals(com1)) {
-                            mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
-                        }
-                    }
-                    break;
-
-                case message_type.ESTOP_PAUSED:
-                case message_type.ESTOP_RESUMED:
-                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
-                    break;
-
-                case message_type.REFRESH_OVERFLOW_MENU:
-                    refreshOverflowMenu();
                     break;
 
                 case message_type.TERMINATE_ALL_ACTIVITIES_BAR_CONNECTION:
@@ -191,7 +195,14 @@ public class withrottle_cv_programmer extends AppCompatActivity {
                     endThisActivity();
                     break;
 
-                default:
+                case message_type.DISCONNECT:
+                    disconnect();
+                    break;
+
+                case message_type.RESTART_APP:
+                case message_type.RELAUNCH_APP:
+                case message_type.SHUTDOWN:
+                    shutdown();
                     break;
 
             }
@@ -270,7 +281,11 @@ public class withrottle_cv_programmer extends AppCompatActivity {
                     } else {
                         msg= String.format("%02x %02x %02x %02x %02x %02x", segments[0], segments[1], segments[2], segments[3], segments[4], segments[5]);
                     }
-                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_DIRECT_DCC_COMMAND, msg, addr);
+//                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_DIRECT_DCC_COMMAND, msg, addr);
+
+                    Bundle bundle = new Bundle();
+                    bundle.putString(alert_bundle_tag_type.COMMAND, msg);
+                    mainapp.alertCommHandlerWithBundle(message_type.WRITE_DIRECT_DCC_COMMAND, bundle);
                 } else {
                     resetTextField(WHICH_ADDRESS);
                 }
@@ -515,7 +530,8 @@ public class withrottle_cv_programmer extends AppCompatActivity {
         setContentView(R.layout.withrottle_cv_programmer);
 
         //put pointer to this activity's handler in main app's shared variable (If needed)
-        mainapp.withrottle_cv_programmer_msg_handler = new withrottle_cv_programmer_handler(Looper.getMainLooper());
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.WITHROTTLE_CV_PROGRAMMER] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.WITHROTTLE_CV_PROGRAMMER] = new BundleMessageHandler(Looper.getMainLooper());
 
         etWitAddressValue = findViewById(R.id.wit_WitWriteAddressValue);
         etWitAddressValue.setText("");
@@ -671,12 +687,8 @@ public class withrottle_cv_programmer extends AppCompatActivity {
 
         mainapp.hideSoftKeyboard(this.getCurrentFocus());
         mainapp.witScreenIsOpen = false;
-        if (mainapp.withrottle_cv_programmer_msg_handler != null) {
-            mainapp.withrottle_cv_programmer_msg_handler.removeCallbacksAndMessages(null);
-            mainapp.withrottle_cv_programmer_msg_handler = null;
-        } else {
-            Log.d(threaded_application.applicationName, activityName + ": onDestroy(): mainapp.withrottle_cv_programmer_msg_handler is null. Unable to removeCallbacksAndMessages");
-        }
+
+        mainapp.clearActivityBundleMessageHandler(activity_id_type.WITHROTTLE_CV_PROGRAMMER);
     }
 
     @Override

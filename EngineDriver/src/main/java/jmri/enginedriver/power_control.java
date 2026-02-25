@@ -17,7 +17,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package jmri.enginedriver;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -46,6 +45,7 @@ import android.widget.TextView;
 import java.util.Objects;
 
 import jmri.enginedriver.type.activity_id_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.message_type;
 import jmri.enginedriver.util.BackgroundImageLoader;
 import jmri.enginedriver.util.LocaleHelper;
@@ -72,56 +72,65 @@ public class power_control extends AppCompatActivity {
 
     float vn = 4; // DCC-EC Version number
 
-    //Handle messages from the communication thread back to this thread (responses from withrottle)
-    @SuppressLint("HandlerLeak")
-    class PowerControlMessageHandler extends Handler {
+    private class BundleMessageHandler extends Handler {
 
-        public PowerControlMessageHandler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
+        @Override
         public void handleMessage(Message msg) {
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+            Bundle bundle = msg.getData();
+
             switch (msg.what) {
-                case message_type.RESPONSE:
-                    String response_str = msg.obj.toString();
-                    if (response_str.length() >= 3 && response_str.startsWith("PPA")) {  //refresh power state
+                case message_type.RECEIVED_DCCEX_TRACKS:
+                    refreshDccexTracksView();
+                    break;
+
+                case message_type.RECEIVED_POWER_STATE_CHANGE:
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.TRACK))) {
+
                         refresh_power_control_view();
-                    }
-                    if ( (response_str.length() == 5) && ("PXX".equals(response_str.substring(0, 3))) ) {  // individual track power response
-                        refreshDccexTracksView();
+                        if (bundle.containsKey(alert_bundle_tag_type.TRACK)) {
+//                            int track = bundle.getInt(alert_bundle_tag_type.TRACK);
+                            refreshDccexTracksView();
+                        }
                     }
                     break;
 
-                case message_type.ESTOP_PAUSED:
-                case message_type.ESTOP_RESUMED:
-                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                case message_type.RECEIVED_DCCEX_ESTOP_PAUSED:
+                case message_type.RECEIVED_DCCEX_ESTOP_RESUMED:
+                    if (overflowMenu != null)
+                        mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
                     break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
 
                 case message_type.REFRESH_OVERFLOW_MENU:
                     refreshOverflowMenu();
                     break;
 
-                case message_type.REOPEN_THROTTLE:
-                    if (threaded_application.currentActivity == activity_id_type.POWER_CONTROL)
-                        endThisActivity();
-                    break;
-
-                case message_type.WIT_CON_RETRY:
-                    witRetry(msg.obj.toString());
-                    break;
                 case message_type.WIT_CON_RECONNECT:
                     refresh_power_control_view();
                     break;
-                case message_type.RESTART_APP:
-                case message_type.RELAUNCH_APP:
-                case message_type.SHUTDOWN:
-                    shutdown();
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.WIT_CON_RETRY:
+                    if ((bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.MESSAGE))) {
+
+                        witRetry(bundle.getString(alert_bundle_tag_type.MESSAGE));
+                    }
                     break;
-                case message_type.DISCONNECT:
-                    disconnect();
-                    break;
-                case message_type.RECEIVED_TRACKS:
-                    refreshDccexTracksView();
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.REOPEN_THROTTLE:
+                    if (threaded_application.currentActivity == activity_id_type.POWER_CONTROL)
+                        endThisActivity();
                     break;
 
                 case message_type.TERMINATE_ALL_ACTIVITIES_BAR_CONNECTION:
@@ -129,7 +138,14 @@ public class power_control extends AppCompatActivity {
                     endThisActivity();
                     break;
 
-                default:
+                case message_type.DISCONNECT:
+                    disconnect();
+                    break;
+
+                case message_type.RESTART_APP:
+                case message_type.RELAUNCH_APP:
+                case message_type.SHUTDOWN:
+                    shutdown();
                     break;
 
             }
@@ -150,7 +166,11 @@ public class power_control extends AppCompatActivity {
             if (mainapp.power_state.equals("1")) { //toggle to opposite value 0=off, 1=on
                 newState = 0;
             }
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.POWER_CONTROL, "", newState);
+
+            Bundle bundle = new Bundle();
+            bundle.putInt(alert_bundle_tag_type.POWER_STATE, newState);
+            mainapp.alertCommHandlerWithBundle(message_type.POWER_CONTROL, bundle);
+
             mainapp.buttonVibration();
         }
     }
@@ -165,11 +185,14 @@ public class power_control extends AppCompatActivity {
         }
 
         public void onClick(View v) {
+            Bundle bundle = new Bundle();
+            bundle.putChar(alert_bundle_tag_type.TRACK_CHAR, myTrackLetter);
             if (mainapp.dccexTrackPower[myTrack] == 0 ) {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_TRACK_POWER, ""+myTrackLetter, 1);
+                bundle.putInt(alert_bundle_tag_type.POWER_STATE, 1);
             } else {
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WRITE_TRACK_POWER, ""+myTrackLetter, 0);
+                bundle.putInt(alert_bundle_tag_type.POWER_STATE, 0);
             }
+            mainapp.alertCommHandlerWithBundle(message_type.WRITE_TRACK_POWER, bundle);
         }
     }
 
@@ -180,7 +203,7 @@ public class power_control extends AppCompatActivity {
         } else if (powerState == 0) {
             mainapp.theme.resolveAttribute(R.attr.ed_power_red_button, outValue, true);
         } else {
-            if (!mainapp.isDCCEX) {
+            if (mainapp.isWiThrottleProtocol()) {
                 mainapp.theme.resolveAttribute(R.attr.ed_power_yellow_button, outValue, true);
             } else {
                 mainapp.theme.resolveAttribute(R.attr.ed_power_green_red_button, outValue, true);
@@ -218,7 +241,7 @@ public class power_control extends AppCompatActivity {
                     currentImage = powerOnDrawable;
                     break;
                 case "2":
-                    if (!mainapp.isDCCEX) {
+                    if (mainapp.isWiThrottleProtocol()) {
                         currentImage = powerUnknownDrawable;
                     } else {
                         currentImage = powerOnAndOffDrawable;
@@ -253,10 +276,13 @@ public class power_control extends AppCompatActivity {
         setContentView(R.layout.power_control);
 
         //put pointer to this activity's handler in main app's shared variable (If needed)
-        mainapp.power_control_msg_handler = new PowerControlMessageHandler(Looper.getMainLooper());
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.POWER_CONTROL] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.POWER_CONTROL] = new BundleMessageHandler(Looper.getMainLooper());
 
         // request this as early as possible
-        if (mainapp.isDCCEX) mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_TRACKS, "");
+        if (mainapp.isDccexProtocol()) {
+            mainapp.alertCommHandlerWithBundle(message_type.REQUEST_TRACKS);
+        }
 
         vn = mainapp.getDccexVersionNumeric();
 
@@ -374,12 +400,7 @@ public class power_control extends AppCompatActivity {
     public void onDestroy() {
         super.onDestroy();
 
-        if (mainapp.power_control_msg_handler !=null) {
-            mainapp.power_control_msg_handler.removeCallbacksAndMessages(null);
-            mainapp.power_control_msg_handler = null;
-        } else {
-            Log.d(threaded_application.applicationName, activityName + ": onDestroy(): mainapp.power_control_msg_handler is null. Unable to removeCallbacksAndMessages");
-        }
+        mainapp.clearActivityBundleMessageHandler(activity_id_type.POWER_CONTROL);
     }
 
     @Override

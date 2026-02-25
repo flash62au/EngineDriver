@@ -5,6 +5,7 @@ import android.util.Log;
 
 import jmri.enginedriver.R;
 import jmri.enginedriver.threaded_application;
+import jmri.enginedriver.type.activity_id_type;
 import jmri.enginedriver.type.sounds_type;
 
 public class InPhoneLocoSounds {
@@ -130,7 +131,8 @@ public class InPhoneLocoSounds {
         int nextSound = mainapp.soundsLocoQueue[whichThrottle].frontOfQueue();
 
         if (nextSound >= 0) {
-            mainapp.throttle_msg_handler.postDelayed(
+            if (mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] != null)
+                mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE].postDelayed(
                     new ScheduleNextSoundToPlay(sounds_type.LOCO, whichThrottle, nextSound, soundsIsMuted),
                     expectedEndTime - 100);
 //            Log.d(threaded_application.applicationName, activityName + ": soundScheduleNextLocoSound : (ipls) wt:" + whichThrottle + " snd: " + nextSound + " Start in: " + expectedEndTime + "msec");
@@ -191,7 +193,8 @@ public class InPhoneLocoSounds {
             if (soundType != sounds_type.HORN_SHORT) {
                 soundStart(soundType, whichThrottle, sounds_type.BELL_HORN_START, 0, soundsIsMuted);
                 // queue up the loop sound to be played when the start sound is finished
-                mainapp.throttle_msg_handler.postDelayed(
+                if (mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] != null)
+                    mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE].postDelayed(
                         new ScheduleNextSoundToPlay(soundType, whichThrottle, sounds_type.BELL_HORN_START, soundsIsMuted),
                         mainapp.soundsExtrasDuration[soundTypeArrayIndex][whichThrottle][sounds_type.BELL_HORN_START]);
             } else {
@@ -208,14 +211,16 @@ public class InPhoneLocoSounds {
             if (soundIsPlaying(soundType, whichThrottle) == 0) {
                 // if the start sound is currently playing need to do something special
                 // as the loop is probably scheduled to run but has not started yet
-                mainapp.throttle_msg_handler.postDelayed(
+                if (mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] != null)
+                    mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE].postDelayed(
                         new ScheduleSoundToStop(soundType, whichThrottle, sounds_type.BELL_HORN_LOOP),
                         mainapp.soundsExtrasDuration[soundTypeArrayIndex][whichThrottle][sounds_type.BELL_HORN_START] + 100);
 
             } else if (soundIsPlaying(soundType, whichThrottle) == 1) { // check if the loop sound is currently playing
                 int expectedEndTime = soundStop(soundType, whichThrottle, sounds_type.BELL_HORN_LOOP, false);
                 // queue up the end sound
-                mainapp.throttle_msg_handler.postDelayed(
+                if (mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE] != null)
+                    mainapp.activityBundleMessageHandlers[activity_id_type.THROTTLE].postDelayed(
                         new ScheduleNextSoundToPlay(soundType, whichThrottle, sounds_type.BELL_HORN_LOOP, soundsIsMuted),
                         expectedEndTime);
             }

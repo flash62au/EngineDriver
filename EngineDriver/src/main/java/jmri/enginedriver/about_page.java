@@ -77,7 +77,8 @@ public class about_page extends AppCompatActivity {
         closeButton.setOnClickListener(closeButtonlistener);
 
         //put pointer to this activity's handler in main app's shared variable
-        mainapp.about_page_msg_handler = new about_page_handler(Looper.getMainLooper());
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.ABOUT] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.ABOUT] = new BundleMessageHandler(Looper.getMainLooper());
 
         OnBackPressedCallback callback = new OnBackPressedCallback(true /* enabled by default */) {
             @Override
@@ -183,31 +184,30 @@ public class about_page extends AppCompatActivity {
         connection_activity.overridePendingTransition(this, R.anim.fade_in, R.anim.fade_out);
     }
 
-    @SuppressLint("HandlerLeak")
-    class about_page_handler extends Handler {
+    private class BundleMessageHandler extends Handler {
 
-        public about_page_handler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
+        @Override
         public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case message_type.RESPONSE: {    //handle messages from WiThrottle server
-                    String s = msg.obj.toString();
-                    if (s.length() >= 3) {
-                        String com1 = s.substring(0, 3);
-                        //update power icon
-                        if ("PPA".equals(com1)) {
-                            mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
-                        }
-                    }
-                    break;
-                }
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            Bundle bundle = msg.getData();
 
-                case message_type.ESTOP_PAUSED:
-                case message_type.ESTOP_RESUMED:
-                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+            switch (msg.what) {
+                case message_type.RECEIVED_POWER_STATE_CHANGE:
+                    if (overflowMenu != null)
+                        mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
                     break;
+
+                case message_type.RECEIVED_DCCEX_ESTOP_PAUSED:
+                case message_type.RECEIVED_DCCEX_ESTOP_RESUMED:
+                    if (overflowMenu != null)
+                        mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
 
                 case message_type.REFRESH_OVERFLOW_MENU:
                     refreshOverflowMenu();
@@ -220,9 +220,6 @@ public class about_page extends AppCompatActivity {
 
                 case message_type.LOW_MEMORY:
                     endThisActivity();
-                    break;
-
-                default:
                     break;
 
             }

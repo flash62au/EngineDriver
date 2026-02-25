@@ -85,6 +85,7 @@ import java.util.Objects;
 import eu.esu.mobilecontrol2.sdk.MobileControl2;
 
 import jmri.enginedriver.type.activity_id_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.auto_import_export_option_type;
 import jmri.enginedriver.type.consist_function_rule_style_type;
 import jmri.enginedriver.type.import_export_option_type;
@@ -199,10 +200,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         deviceId = mainapp.getFakeDeviceId();
 
         //put pointer to this activity's message handler in main app's shared variable (If needed)
-        mainapp.settings_msg_handler = new SettingsActivity.settings_handler(Looper.getMainLooper());
-
-        //put pointer to this activity's message handler in main app's shared variable (If needed)
-//        mainapp.preferences_msg_handler = new SettingsActivity.settings_handler(Looper.getMainLooper());
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.SETTINGS] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.SETTINGS] = new BundleMessageHandler(Looper.getMainLooper());
 
         InPhoneLocoSoundsLoader iplsLoader = new InPhoneLocoSoundsLoader(mainapp, prefs, getApplicationContext());
         iplsLoader.getIplsList();
@@ -313,12 +312,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     protected void onDestroy() {
         Log.d(threaded_application.applicationName, activityName + ": onDestroy()");
         super.onDestroy();
-        if (mainapp.settings_msg_handler !=null) {
-            mainapp.settings_msg_handler.removeCallbacksAndMessages(null);
-            mainapp.settings_msg_handler = null;
-        } else {
-            Log.d(threaded_application.applicationName, activityName + ": onDestroy(): mainapp.settings_msg_handler is null. Unable to removeCallbacksAndMessages");
-        }
+
+        mainapp.clearActivityBundleMessageHandler(activity_id_type.SETTINGS);
+
         if (forceRestartAppOnPreferencesClose) {
             forceRestartApp(forceRestartAppOnPreferencesCloseReason);
         }
@@ -341,10 +337,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }
         this.finish();
         connection_activity.overridePendingTransition(this, R.anim.fade_in, R.anim.fade_out);
-        Message msg = Message.obtain();
-        msg.what = message_type.RESTART_APP;
-        msg.arg1 = forcedRestartReason;
-        mainapp.comm_msg_handler.sendMessage(msg);
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.RESTART_REASON, forcedRestartReason);
+        mainapp.alertCommHandlerWithBundle(message_type.RESTART_APP, bundle);
     }
 
     @SuppressLint("ApplySharedPref")
@@ -354,9 +350,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         this.finish();
         connection_activity.overridePendingTransition(this, R.anim.fade_in, R.anim.fade_out);
         Message msg = Message.obtain();
-        msg.what = message_type.RELAUNCH_APP;
-        msg.arg1 = forcedRestartReason;
-        mainapp.comm_msg_handler.sendMessage(msg);
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.RESTART_REASON, forcedRestartReason);
+        mainapp.alertCommHandlerWithBundle(message_type.RELAUNCH_APP, bundle);
 
     }
 
@@ -651,55 +648,34 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         super.attachBaseContext(LocaleHelper.onAttach(base));
     }
 
-    //Handle messages from the communication thread back to the UI thread.
-    // currently only for the download from a URL
-    @SuppressLint("HandlerLeak")
-    private class settings_handler extends Handler {
+    private class BundleMessageHandler extends Handler {
 
-        public settings_handler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
-        @SuppressLint("ApplySharedPref")
+        @Override
         public void handleMessage(Message msg) {
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            Bundle bundle = msg.getData();
+
             switch (msg.what) {
-                case message_type.RESPONSE:                       // see if loco added to or removed from any throttle
-                    String response_str = msg.obj.toString();
-                    if (response_str.length() >= 3) {
-//                        char com1 = response_str.charAt(0);
-//                        char com2 = response_str.charAt(2);
-
-                        String comA = response_str.substring(0, 3);
-                        //update power icon
-                        if ("PPA".equals(comA)) {
-                            mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
-                        }
-                    }
+                case message_type.RECEIVED_POWER_STATE_CHANGE:
+                    if (overflowMenu != null)
+                        mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
                     break;
 
-                case message_type.ESTOP_PAUSED:
-                case message_type.ESTOP_RESUMED:
-                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                case message_type.RECEIVED_DCCEX_ESTOP_PAUSED:
+                case message_type.RECEIVED_DCCEX_ESTOP_RESUMED:
+                    if (overflowMenu != null)
+                        mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
                     break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
 
                 case message_type.REFRESH_OVERFLOW_MENU:
                     refreshOverflowMenu();
                     break;
-
-                case message_type.IMPORT_SERVER_MANUAL_SUCCESS:
-                    Log.d(threaded_application.applicationName, activityName + ": handleMessage(): Settings: Message: Import preferences from Server: File Found");
-                    loadSharedPreferencesFromFile(prefs, EXTERNAL_URL_PREFERENCES_IMPORT, deviceId, restart_reason_type.IMPORT_SERVER_MANUAL);
-                    break;
-
-//                case message_type.IMPORT_SERVER_MANUAL_FAIL:
-//                    Log.d(threaded_application.applicationName, activityName + ": handleMessage(): Settings: Message: Import preferences from Server: File not Found");
-//                    prefs.edit().putString("prefImportExport", import_export_option_type.NONE).commit();  //reset the preference
-//                    prefs.edit().putString("prefHostImportExport", import_export_option_type.NONE).commit();  //reset the preference
-//                    mainapp.safeToast(getApplicationContext().getResources().getString(R.string.toastPreferencesImportServerManualFailed,
-//                            prefs.getString("prefImportServerManual", getApplicationContext().getResources().getString(R.string.prefImportServerManualDefaultValue))),
-//                            Toast.LENGTH_LONG);
-//                    reload();
-//                    break;
 
                 case message_type.REOPEN_THROTTLE:
                     if (threaded_application.currentActivity == activity_id_type.SETTINGS)
@@ -709,9 +685,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 case message_type.TERMINATE_ALL_ACTIVITIES_BAR_CONNECTION:
                 case message_type.LOW_MEMORY:
                     endThisActivity();
-                    break;
-
-                default:
                     break;
 
             }
@@ -1379,7 +1352,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         boolean enableButton = prefs.getBoolean("prefShowDispatchButton", false);
         boolean prefSelectLocoByRadioButtons = prefs.getBoolean("prefSelectLocoByRadioButtons", false);
         if (!enableCmd && !enableButton) {enableCmd = true; enableButton = true;} // in case both are enabled accidentally
-        if (mainapp.isDCCEX) {
+        if (mainapp.isDccexProtocol()) {
             enableCmd = false; enableButton = false;
         } else {
             if (prefSelectLocoByRadioButtons) {
@@ -1453,7 +1426,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     private void showHideDccexPreferences(PreferenceScreen prefScreen) {
-        boolean enable = ( ((mainapp.isDCCEX) && (mainapp.getDccexVersionNumeric() >= 5.005058))
+        boolean enable = ( ((mainapp.isDccexProtocol()) && (mainapp.getDccexVersionNumeric() >= 5.005058))
                 || (mainapp.connectedHostName.isEmpty()));
         enableDisablePreference(prefScreen, "prefDccexEmergencyStopPauseResume", enable);
     }
@@ -1745,11 +1718,18 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         parentActivity.mainapp.setActivityOrientation(parentActivity);
                         break;
                     case "prefInitialWebPage":
-                        parentActivity.mainapp.alert_activities(message_type.INITIAL_WEB_WEBPAGE, "");
+                        parentActivity.mainapp.alertActivitiesWithBundle(message_type.INITIAL_WEB_WEBPAGE);
                         break;
+
                     case "prefClockDisplayType":
-                        parentActivity.mainapp.sendMsg(parentActivity.mainapp.comm_msg_handler, message_type.CLOCK_DISPLAY_CHANGED);
+                        try {
+                            mainapp.fastClockFormat = Integer.parseInt(Objects.requireNonNull(prefs.getString("prefClockDisplayType", "0")));
+                        } catch (NumberFormatException e) {
+                            mainapp.fastClockFormat = 0;
+                        }
+                        mainapp.alertActivitiesWithBundle(message_type.RECEIVED_TIME_CHANGE);
                         break;
+
                     case "prefNumberOfDefaultFunctionLabels":
                         // limit check new value
                         parentActivity.limitIntPrefValue(getPreferenceScreen(), sharedPreferences, key, 0, 32, "32");
@@ -1901,7 +1881,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }
         public Boolean getConnectedHostIsDccEx() {
             if (mainapp != null) {
-                return mainapp.isDCCEX;
+                return mainapp.isDccexProtocol();
             }
             return false;
         }
@@ -2072,11 +2052,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }
 
         private void showHideFilterPreferences() {
-            parentActivity.enableDisablePreference(getPreferenceScreen(), "prefRosterOwnersFilterShowOption", !mainapp.isDCCEX);
+            parentActivity.enableDisablePreference(getPreferenceScreen(), "prefRosterOwnersFilterShowOption", mainapp.isWiThrottleProtocol());
         }
 
         private void showHideTurnoutsPreferences() {
-            parentActivity.enableDisablePreference(getPreferenceScreen(), "prefDccexSwapThrowClose", ((mainapp.isDCCEX) || (parentActivity.mainapp.connectedHostName.isEmpty())) );
+            parentActivity.enableDisablePreference(getPreferenceScreen(), "prefDccexSwapThrowClose", ((mainapp.isDccexProtocol()) || (parentActivity.mainapp.connectedHostName.isEmpty())) );
         }
 
         @SuppressLint("ApplySharedPref")
@@ -2577,12 +2557,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         break;
 
                     case "prefWebViewLocation":
-                        parentActivity.mainapp.alert_activities(message_type.WEBVIEW_LOC, "");
+                        parentActivity.mainapp.alertActivitiesWithBundle(message_type.WEBVIEW_LOCATION, activity_id_type.THROTTLE);
                         parentActivity.forceRestartAppOnPreferencesCloseReason = restart_reason_type.THROTTLE_SWITCH;
                         parentActivity.forceRestartAppOnPreferencesClose = true;
                         break;
+
                     case "prefInitialThrottleWebPage":
-                        parentActivity.mainapp.alert_activities(message_type.INITIAL_THR_WEBPAGE, "");
+                        parentActivity.mainapp.alertActivitiesWithBundle(message_type.INITIAL_THROTTLE_WEBPAGE, activity_id_type.THROTTLE);
                         break;
 
                     case "prefDirectionButtonLongPressDelay":

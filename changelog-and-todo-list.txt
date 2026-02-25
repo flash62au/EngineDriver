@@ -3,6 +3,10 @@
     * Bug fix for the Consist Edit and Consist Light Edit screens on early versions of Android
  * Other
     * Improve comms to the reconnect screen.  Previously, many messages would not have been considered a successful reconnect
+    * Major changes in the way that inter-activity communication works (now uses Bundles)
+      Removed a number of unnecessary and/or repetitive calls to comm_handler.
+      Removed a number of unnecessary broadcasts to all activities.
+      Mostly isolated the incoming DCC-EX processing from the WiThrottle processing.  Will move to separate classes later
 **Version 2.42.218
  * New Features
     * Added localisation files for English (Singapore) and English (India). Same as UK/Australia/NZ.
@@ -1034,7 +1038,6 @@
  * general/global
  *   TODO: change config files to use db instead of .txt files
  *   TODO: Add toast messages on release of loco (even on Exit) and update of preferences
- *   TODO: split RESPONSE message into multiples, and remove string parsing from other activities
  *   TODO: rewrite procedural process_xxx functions into proper OO classes
  *   TODO: move some actions from onCreate() or onResume() to onStart() in activities to simplify and remove some repeated calls.
 * general/global
@@ -1088,6 +1091,8 @@
  *   TODO: move code to a separate class. This is now partly done.
  *   TODO: support Routes on keyboards.
  *   TODO: work out how to fully support the gamepads on the Throttle and Routes pages.  Android reports a different id for the device.
+ *   TODO: add the ability to support custom gamepad configs
+ *   TODO: add the ability for the keyboard type to send customer commands.  e.g. everything between quites(") is send to the CS unaltered.
  * In Phone Loco Sounds (throttle):
  *   TODO: move code to a separate class. This is now partly done, but the variables are still in t_a
  *   TODO: custom sound profiles to be able to specify/override the momentum delay

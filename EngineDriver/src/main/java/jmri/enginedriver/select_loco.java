@@ -102,6 +102,7 @@ import jmri.enginedriver.type.Consist;
 import jmri.enginedriver.type.Consist.ConLoco;
 import jmri.enginedriver.type.Loco;
 import jmri.enginedriver.type.activity_id_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.light_follow_type;
 import jmri.enginedriver.type.select_loco_method_type;
 import jmri.enginedriver.type.sort_type;
@@ -489,7 +490,7 @@ public class select_loco extends AppCompatActivity {
         currentLocosLayout[1] = findViewById(R.id.current_locos_layout1);
 
         boolean prefShowDispatchButton = prefs.getBoolean("prefShowDispatchButton", false);
-        if (mainapp.isDCCEX) prefShowDispatchButton = false; // not relevant to DCC-EX
+        if (mainapp.isDccexProtocol()) prefShowDispatchButton = false; // not relevant to DCC-EX
 
         ImageButton dispatchButton1 = findViewById(R.id.dispatch_button1);
         dispatchButton1.setOnClickListener(new DispatchButtonListener(whichThrottle));
@@ -604,84 +605,67 @@ public class select_loco extends AppCompatActivity {
         }
     }
 
-    // Handle messages from the communication thread back to this thread
-    // (responses from withrottle)
-    @SuppressLint("HandlerLeak")
-    class SelectLocoHandler extends Handler {
+    private class BundleMessageHandler extends Handler {
 
-        public SelectLocoHandler(Looper looper) {
+        public BundleMessageHandler(Looper looper) {
             super(looper);
         }
 
+        @Override
         public void handleMessage(Message msg) {
-            Log.d(threaded_application.applicationName, activityName + ": handleMessage(): " + msg);
+            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+            Bundle bundle = msg.getData();
 
             switch (msg.what) {
-                case message_type.RESPONSE:
-                    String response_str = msg.obj.toString();
-                    Log.d(threaded_application.applicationName, activityName + ": SelectLocoHandler(): RESPONSE - message <--:" + response_str);
-                    if (response_str.length() >= 3) {
-                        String comA = response_str.substring(0, 3);
-                        //update power icon
-                        if ("PPA".equals(comA)) {
-                            mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
-                        }
-                    }
-                    if (!response_str.isEmpty()) {
-                        char com1 = response_str.charAt(0);
-                        if (com1 == 'R') {                                  //refresh labels when any roster response is received
-                            rosterListAdapter.notifyDataSetChanged();
-                            setLabels();
-                            break;
-                        } else if (com1 == 'M' && response_str.length() >= 3) { // refresh Release buttons if loco is added or removed from a consist
-                            char com2 = response_str.charAt(2);
-                            if (com2 == '+' || com2 == '-')
-                                setLabels();
-                            break;
-                        } else { // ignore everything else
-                            Log.d(threaded_application.applicationName, activityName + ": SelectLocoHandler(): RESPONSE - ignoring message: " + response_str);
-                            break;
-                        }
-                    }
-                    if (!selectLocoRendered)         // call setLabels() if the select loco textViews had not rendered the last time it was called
-                        setLabels();
+                case message_type.RECEIVED_POWER_STATE_CHANGE:
+                    if (overflowMenu != null)
+                        mainapp.setPowerStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.powerLayoutButton));
                     break;
 
-                case message_type.ESTOP_PAUSED:
-                case message_type.ESTOP_RESUMED:
-                    mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
+                case message_type.RECEIVED_DCCEX_ESTOP_PAUSED:
+                case message_type.RECEIVED_DCCEX_ESTOP_RESUMED:
+                    if (overflowMenu != null)
+                        mainapp.setEmergencyStopStateActionViewButton(overflowMenu, overflowMenu.findItem(R.id.emergency_stop_button));
                     break;
+
+                case message_type.RECEIVED_THROTTLE_LOCO_ADDED:
+                case message_type.RECEIVED_THROTTLE_LOCO_REMOVED:
+                    setLabels();
+                    break;
+
+                case message_type.RECEIVED_ROSTER_UPDATE:
+                    Log.d(threaded_application.applicationName, activityName + ": handleMessage(): RECEIVED_ROSTER_UPDATE");
+                    rosterListAdapter.notifyDataSetChanged();
+                    setLabels();
+                    showMethod(prefSelectLocoMethod);
+                    break;
+
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
 
                 case message_type.REFRESH_OVERFLOW_MENU:
                     refreshOverflowMenu();
                     break;
 
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
                 case message_type.WIT_CON_RETRY:
-                    Log.d(threaded_application.applicationName, activityName + ": SelectLocoHandler(): WIT_CON_RETRY");
-                    witRetry(msg.obj.toString());
+                    if ( (bundle != null)
+                            && (bundle.containsKey(alert_bundle_tag_type.MESSAGE)) ) {
+
+                        witRetry(bundle.getString(alert_bundle_tag_type.MESSAGE));
+                    }
                     break;
 
-                case message_type.ROSTER_UPDATE:
-                    Log.d(threaded_application.applicationName, activityName + ": SelectLocoHandler(): ROSTER_UPDATE");
-                    setLabels();
-                    showMethod(prefSelectLocoMethod);
-                    break;
-
-                case message_type.REOPEN_THROTTLE:
-                    if (threaded_application.currentActivity == activity_id_type.SELECT_LOCO)
-                        reopenThrottlePage();
-                    break;
                 case message_type.WIT_CON_RECONNECT:
-                    Log.d(threaded_application.applicationName, activityName + ": SelectLocoHandler(): WIT_CON_RECONNECT");
                     rosterListAdapter.notifyDataSetChanged();
                     setLabels();
                     break;
 
-                case message_type.RESTART_APP:
-                case message_type.RELAUNCH_APP:
-                case message_type.DISCONNECT:
-                    Log.d(threaded_application.applicationName, activityName + ": SelectLocoHandler(): DISCONNECT");
-                    endThisActivity();
+                // - - - - - - - - - - - - - - - - - - - - - - - - //
+
+                case message_type.REOPEN_THROTTLE:
+                    if (threaded_application.currentActivity == activity_id_type.SELECT_LOCO)
+                        reopenThrottlePage();
                     break;
 
                 case message_type.TERMINATE_ALL_ACTIVITIES_BAR_CONNECTION:
@@ -689,9 +673,11 @@ public class select_loco extends AppCompatActivity {
                     endThisActivity();
                     break;
 
-                default:
+                case message_type.RESTART_APP:
+                case message_type.RELAUNCH_APP:
+                case message_type.DISCONNECT:
+                    endThisActivity();
                     break;
-
             }
         }
     }
@@ -709,7 +695,12 @@ public class select_loco extends AppCompatActivity {
         Log.d(threaded_application.applicationName, activityName + ": releaseLoco()");
         mainapp.storeThrottleLocosForReleaseDCCEX(whichThrottle);
         mainapp.consists[whichThrottle].release();
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.RELEASE, "", whichThrottle); // pass 0, 1 or 2 in message
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+        bundle.putString(alert_bundle_tag_type.LOCO_TEXT,"");
+        mainapp.alertCommHandlerWithBundle(message_type.RELEASE, bundle);
+
         importExportPreferences.writeThrottlesEnginesListToFile(mainapp, getApplicationContext(), mainapp.prefNumThrottles);
     }
 
@@ -718,7 +709,12 @@ public class select_loco extends AppCompatActivity {
         Log.d(threaded_application.applicationName, activityName + ": dispatchLoco()");
         mainapp.storeThrottleLocosForReleaseDCCEX(whichThrottle);  //not relevant to DCC-EX
         mainapp.consists[whichThrottle].release();
-        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.DISPATCH, "", whichThrottle); // pass 0, 1 or 2 in message
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+        bundle.putString(alert_bundle_tag_type.LOCO_TEXT,"");
+        mainapp.alertCommHandlerWithBundle(message_type.DISPATCH, bundle);
+
         importExportPreferences.writeThrottlesEnginesListToFile(mainapp, getApplicationContext(), mainapp.prefNumThrottles);
     }
 
@@ -758,7 +754,11 @@ public class select_loco extends AppCompatActivity {
                 if (consist.getLoco(sAddr) != null) {
                     overrideThrottleName = "";
                     mainapp.safeToast(getApplicationContext().getResources().getString(R.string.toastLocoAlreadySelected, sAddr), Toast.LENGTH_SHORT);
-                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQ_LOCO_ADDR, sAddr, whichThrottle);  // send the acquire message anyway
+
+                    Bundle bundle = new Bundle();
+                    bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
+                    bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+                    mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
                     return false;
                 }
             }
@@ -787,7 +787,12 @@ public class select_loco extends AppCompatActivity {
             consist.setWhichSource(importExportPreferences.locoAddressToString(locoAddress, locoAddressSize, true), locoSource);
             consist.setLeadAddr(l.getAddress());
             consist.setTrailAddr(l.getAddress());
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQ_LOCO_ADDR, sAddr, whichThrottle);
+
+            Bundle bundle = new Bundle();
+            bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
+            bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+            mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
+
             result = RESULT_OK;
             endThisActivity();
 
@@ -797,7 +802,11 @@ public class select_loco extends AppCompatActivity {
             if (newEngine || !conLoco.isConfirmed()) {        // if engine is not already in the consist, or if it is but never got acquired
                 consist.add(l);
                 consist.setWhichSource(importExportPreferences.locoAddressToString(locoAddress, locoAddressSize, true), locoSource);
-                mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQ_LOCO_ADDR, sAddr, whichThrottle);
+
+                Bundle bundle = new Bundle();
+                bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
+                bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+                mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
 
                 saveUpdateList = bUpdateList;
                 consist.setTrailAddr(l.getAddress());  // set the newly added loco as the trailing loco
@@ -808,7 +817,7 @@ public class select_loco extends AppCompatActivity {
         }
 
         // see if we can get the functions for the recent locos list
-        if ( (prefSelectLocoMethod.equals(select_loco_method_type.RECENT_LOCOS)) && (!mainapp.isDCCEX) ) {
+        if ( (prefSelectLocoMethod.equals(select_loco_method_type.RECENT_LOCOS)) && (mainapp.isWiThrottleProtocol()) ) {
             int position = mainapp.findLocoInRecents(locoAddress ,locoAddressSize ,locoName);
             if (position>0) {
                 if (mainapp.prefAlwaysUseFunctionsFromServer) { // unless overridden by the preference
@@ -1298,7 +1307,12 @@ public class select_loco extends AppCompatActivity {
             Log.d(threaded_application.applicationName, activityName + ": IdngoButtonListener(): onClick()");
             Consist consist = mainapp.consists[whichThrottle];
             consist.setWaitingOnID(true);
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQ_LOCO_ADDR, "*", whichThrottle);
+
+            Bundle bundle = new Bundle();
+            bundle.putString(alert_bundle_tag_type.LOCO_TEXT, "*");
+            bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+            mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
+
             result = RESULT_OK;
             mainapp.hideSoftKeyboard(v, activityName);
             endThisActivity();
@@ -1765,7 +1779,8 @@ public class select_loco extends AppCompatActivity {
         setContentView(layoutViewId);
 
         // put pointer to this activity's handler in main app's shared variable
-        mainapp.select_loco_msg_handler = new SelectLocoHandler(Looper.getMainLooper());
+        if (mainapp.activityBundleMessageHandlers[activity_id_type.SELECT_LOCO] == null)
+            mainapp.activityBundleMessageHandlers[activity_id_type.SELECT_LOCO] = new BundleMessageHandler(Looper.getMainLooper());
 
 //        getDefaultSortOrderRoster();
         prefRosterFilter = prefs.getString("prefRosterFilter", this.getResources().getString(R.string.prefRosterFilterDefaultValue));
@@ -2043,7 +2058,7 @@ public class select_loco extends AppCompatActivity {
         prefSelectLocoByRadioButtons = prefs.getBoolean("prefSelectLocoByRadioButtons", getResources().getBoolean(R.bool.prefSelectLocoByRadioButtonsDefaultValue));
         prefSelectLocoMethod = prefs.getString("prefSelectLocoMethod", select_loco_method_type.FIRST);
 
-        if (mainapp.isDCCEX) maxAddr = 10239;  // DCC-EX supports the full range
+        if (mainapp.isDccexProtocol()) maxAddr = 10239;  // DCC-EX supports the full range
 
         overrideThrottleName = "";
 
@@ -2288,12 +2303,7 @@ public class select_loco extends AppCompatActivity {
         Log.d(threaded_application.applicationName, activityName + ": onDestroy(): called");
         super.onDestroy();
 
-        if (mainapp.select_loco_msg_handler != null) {
-            mainapp.select_loco_msg_handler.removeCallbacksAndMessages(null);
-            mainapp.select_loco_msg_handler = null;
-        } else {
-            Log.d(threaded_application.applicationName, activityName + ": onDestroy(): mainapp.select_loco_msg_handler is null. Unable to removeCallbacksAndMessages");
-        }
+        mainapp.clearActivityBundleMessageHandler(activity_id_type.SELECT_LOCO);
     } // end onDestroy()
 
     @Override
@@ -2315,12 +2325,12 @@ public class select_loco extends AppCompatActivity {
         mainapp.refreshCommonOverflowMenu(overflowMenu);
 
         MenuItem menuItem = overflowMenu.findItem(R.id.advancedConsistButton);
-//        menuItem.setVisible((!mainapp.isDCCEX)
+//        menuItem.setVisible((mainapp.isWiThrottleProtocol())
 //                && (prefs.getBoolean("prefActionBarShowAdvancedConsistButton",mainapp.getResources().getBoolean(R.bool.prefActionBarShowAdvancedConsistButtonDefaultValue))));
         if (prefs.getBoolean("prefActionBarShowAdvancedConsistButton",mainapp.getResources().getBoolean(R.bool.prefActionBarShowAdvancedConsistButtonDefaultValue))) {
             menuItem.setVisible(true);
             TypedValue outValue = new TypedValue();
-            if (mainapp.isDCCEX) {
+            if (mainapp.isDccexProtocol()) {
                 mainapp.theme.resolveAttribute(R.attr.ed_dccex_consist_button, outValue, true);
                 if (mainapp.getDccexVersionNumeric() <= 5.005057) menuItem.setVisible(false);
             } else {

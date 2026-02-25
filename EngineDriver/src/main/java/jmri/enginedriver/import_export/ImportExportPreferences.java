@@ -25,6 +25,7 @@ import static java.lang.Math.min;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -47,6 +48,7 @@ import java.util.Map;
 import jmri.enginedriver.type.Consist;
 import jmri.enginedriver.type.Loco;
 import jmri.enginedriver.type.address_type;
+import jmri.enginedriver.type.alert_bundle_tag_type;
 import jmri.enginedriver.type.light_follow_type;
 import jmri.enginedriver.type.message_type;
 import jmri.enginedriver.type.restart_reason_type;
@@ -986,7 +988,12 @@ public class ImportExportPreferences {
                                     for (int j = 0; j <= consist.size(); j++) {
                                         if (consist.getLoco(locoAddress) != null) {
                                             mainapp.safeToast(context.getResources().getString(R.string.toastLocoAlreadySelected, locoAddress), Toast.LENGTH_SHORT);
-                                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQ_LOCO_ADDR, locoAddress, whichThrottle);  // send the acquire message anyway
+                                            // send the acquire message anyway
+                                            Bundle bundle = new Bundle();
+                                            bundle.putString(alert_bundle_tag_type.LOCO_TEXT, locoAddress);
+                                            bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+                                            mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
+
                                             result = false;
                                             break;
                                         }
@@ -1001,8 +1008,12 @@ public class ImportExportPreferences {
                                         consist.setLeadAddr(l.getAddress());
                                     }
                                     consist.setBackward(locoAddress, locoIsBackwards);
-                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQ_LOCO_ADDR, locoAddress, whichThrottle);
+//                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_LOCO_BY_ADDRESS, locoAddress, whichThrottle);
 
+                                    Bundle bundle = new Bundle();
+                                    bundle.putString(alert_bundle_tag_type.LOCO_TEXT, locoAddress);
+                                    bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
+                                    mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
 
                                     if ( (i==0) && (found) ) { //first only
                                         if (!functions.isEmpty()) {
@@ -1196,7 +1207,7 @@ public class ImportExportPreferences {
                     String line = list_reader.readLine();
                     int splitPos = line.indexOf(':');
                     if (splitPos > 0) {
-                        Integer source;
+                        int source;
                         String addr, turnoutName ="", turnoutServer = "";
                         try {
                              addr = line.substring(0, splitPos);
@@ -1320,7 +1331,14 @@ public class ImportExportPreferences {
         for (String rosterName : rosterNameEntries) {
             String sAddr = locoAddressToString(recentLocoAddressList.get(j),
                     recentLocoAddressSizeList.get(j), true);
-            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQ_LOCO_ADDR, sAddr, mainapp.maxThrottles);  // one past the actual number of allow throttles
+            // one past the actual number of allow throttles
+//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_LOCO_BY_ADDRESS, sAddr, mainapp.maxThrottles);
+
+            Bundle bundle = new Bundle();
+            bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
+            bundle.putInt(alert_bundle_tag_type.THROTTLE, mainapp.maxThrottles);
+            mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
+
             j++;
         }
     }
