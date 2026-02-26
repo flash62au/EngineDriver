@@ -356,6 +356,10 @@ public class comm_handler extends Handler {
                     && (bundle.containsKey(alert_bundle_tag_type.THROTTLE)) ) {
 
                final String addr = bundle.getString(alert_bundle_tag_type.LOCO_TEXT);
+               String rosterName = "";
+               if (bundle.containsKey(alert_bundle_tag_type.ROSTER_NAME)) {
+                  rosterName = bundle.getString(alert_bundle_tag_type.ROSTER_NAME);
+               }
                final int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
 
                if (prefs.getBoolean("prefDropOnAcquire",
@@ -363,13 +367,13 @@ public class comm_handler extends Handler {
                   commThread.sendReleaseLoco("*", whichThrottle);
 
                }
-               comm_thread.sendAcquireLoco(addr, whichThrottle);
+               comm_thread.sendAcquireLoco(addr, rosterName, whichThrottle);
             }
             break;
          }
 
          case message_type.REQUEST_DECODER_ADDRESS: { // DCC-EX only
-            comm_thread.sendAcquireLoco("*", -1);
+            comm_thread.sendAcquireLoco("*", "", -1);
             break;
          }
 
@@ -384,7 +388,7 @@ public class comm_handler extends Handler {
          }
 
          case message_type.REQUEST_TRACKS: { // DCC-EX only
-            comm_thread.sendRequestTracks();
+            comm_thread.sendDccexRequestTracks();
             break;
          }
 
@@ -397,7 +401,7 @@ public class comm_handler extends Handler {
                final char track = bundle.getChar(alert_bundle_tag_type.TRACK_CHAR);
                final String type = bundle.getString(alert_bundle_tag_type.TRACK_TYPE_TEXT);
                final int id = bundle.getInt(alert_bundle_tag_type.LOCO);
-               comm_thread.sendTrack(track, type, id);
+               comm_thread.sendDccexTrack(track, type, id);
             }
             break;
          }
@@ -429,7 +433,7 @@ public class comm_handler extends Handler {
 
                char trackLetter = bundle.getChar(alert_bundle_tag_type.TRACK_CHAR);
                int powerState = bundle.getInt(alert_bundle_tag_type.POWER_STATE);
-               comm_thread.sendTrackPower(trackLetter, powerState);
+               comm_thread.sendDccexTrackPower(trackLetter, powerState);
             }
             break;
          }
@@ -439,7 +443,7 @@ public class comm_handler extends Handler {
                     && (bundle.containsKey(alert_bundle_tag_type.CV)) ) {
 
                final int cv = bundle.getInt(alert_bundle_tag_type.CV);
-               comm_thread.sendReadCv(cv);
+               comm_thread.sendDccexReadCv(cv);
             }
             break;
          }
@@ -451,7 +455,7 @@ public class comm_handler extends Handler {
 
                final int cv = bundle.getInt(alert_bundle_tag_type.CV);
                final int cvValue = bundle.getInt(alert_bundle_tag_type.CV_VALUE);
-               comm_thread.sendWriteCv(cv, cvValue);
+               comm_thread.sendDccexWriteCv(cv, cvValue);
             }
                break;
          }
@@ -465,7 +469,7 @@ public class comm_handler extends Handler {
                final int cv = bundle.getInt(alert_bundle_tag_type.CV);
                final int cvValue = bundle.getInt(alert_bundle_tag_type.CV_VALUE);
                final int addr = bundle.getInt(alert_bundle_tag_type.LOCO);
-               comm_thread.sendWritePomCv(cv, cvValue, addr);
+               comm_thread.sendDccexWritePomCv(cv, cvValue, addr);
             }
             break;
          }
@@ -556,7 +560,7 @@ public class comm_handler extends Handler {
                     && (bundle.containsKey(alert_bundle_tag_type.LOCO)) ) {
 
                final int addr = bundle.getInt(alert_bundle_tag_type.LOCO);
-               comm_thread.sendWriteDecoderAddress(addr);
+               comm_thread.sendDccexWriteDecoderAddress(addr);
             }
             break;
          }
@@ -668,7 +672,7 @@ public class comm_handler extends Handler {
                final char routeAction = bundle.getChar(alert_bundle_tag_type.ROUTE_ACTION);
                final int addr = bundle.getInt(alert_bundle_tag_type.LOCO);
 
-               commThread.sendAutomation(route, routeAction, addr);
+               commThread.sendDccexAutomation(route, routeAction, addr);
             }
             break;
          }

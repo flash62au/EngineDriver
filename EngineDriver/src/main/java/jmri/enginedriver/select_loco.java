@@ -757,15 +757,13 @@ public class select_loco extends AppCompatActivity {
 
                     Bundle bundle = new Bundle();
                     bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
+                    if ( ( roster_name!=null) && (!roster_name.isEmpty()) )
+                        bundle.putString(alert_bundle_tag_type.ROSTER_NAME, roster_name);
                     bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                     mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
                     return false;
                 }
             }
-        }
-
-        if (!roster_name.isEmpty()) {// add roster selection info if present
-            sAddr += "<;>" + roster_name;
         }
 
         // user preference set to not consist, or consisting not supported in this JMRI, so drop before adding
@@ -790,6 +788,8 @@ public class select_loco extends AppCompatActivity {
 
             Bundle bundle = new Bundle();
             bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
+            if ( ( roster_name!=null) && (!roster_name.isEmpty()) )
+                bundle.putString(alert_bundle_tag_type.ROSTER_NAME, roster_name);
             bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
             mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
 
@@ -805,6 +805,8 @@ public class select_loco extends AppCompatActivity {
 
                 Bundle bundle = new Bundle();
                 bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
+                if ( ( roster_name!=null) && (!roster_name.isEmpty()) )
+                    bundle.putString(alert_bundle_tag_type.ROSTER_NAME, roster_name);
                 bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                 mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
 

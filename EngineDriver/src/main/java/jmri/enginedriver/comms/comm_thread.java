@@ -348,12 +348,12 @@ public class comm_thread extends Thread {
 //            Log.d(threaded_application.applicationName, activityName + ": sendThrottleName DCC-EX: <s>");
             if (mainapp.DCCEXlistsRequested < 0) { // if we haven't received all the lists go ask for them
                 wifiSend("<s>");
-                sendRequestRoster();
+                sendDccexRequestRoster();
                 if (!prefs.getBoolean("prefDccexSequenceItemRequests", false)) {
-                    sendRequestTurnouts();
-                    sendRequestTurnouts();
-                    sendRequestRoutes();
-                    sendRequestTracks();
+                    sendDccexRequestTurnouts();
+                    sendDccexRequestTurnouts();
+                    sendDccexRequestRoutes();
+                    sendDccexRequestTracks();
                 }
                 sendDccexRequestEmergencyStopState();
                 mainapp.DCCEXlistsRequested = 0;  // don't ask again
@@ -364,31 +364,19 @@ public class comm_thread extends Thread {
         }
     }
 
-    /* ask for specific loco to be added to a throttle
-         input addr is formatted "L37<;>CSX37" or "S96" (if no roster name)
-         msgTxt will be formatted M0+L1012<;>EACL1012 or M1+S96<;>S96 */
-//    static void sendAcquireLoco(String addr, int whichThrottle, int interval) {
-    static void sendAcquireLoco(String addr, int whichThrottle) {
-        String rosterName;
-        String address;
-        String[] as = threaded_application.splitByString(addr, "<;>");
-        if (as.length > 1) {
-            address = as[0];
-            rosterName = "E" + as[1];
-        } else { //if no rosterName, just use address for both
-            address = addr;
-            rosterName = addr;
-        }
-        if (rosterName.trim().isEmpty()) { //if blank rosterName, just use address for both
-            rosterName = addr;
-            Log.d(threaded_application.applicationName, activityName + ": sendAquireLoco(): acquireLoco: addr:'" + addr + "' - blank rosterName should not have occured");
-        }
+    // ask for specific loco to be added to a throttle
+    static void sendAcquireLoco(String addr, String rosterName, int whichThrottle) {
+        String msgTxt = "";
 
-        String msgTxt;
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
-            //format multithrottle request for loco M1+L37<;>ECSX37
-            msgTxt = String.format("M%s+%s<;>%s", mainapp.throttleIntToString(whichThrottle), address, rosterName);  //add requested loco to this throttle
-//            Log.d(threaded_application.applicationName, activityName + ": sendAquireLoco(): acquireLoco: addr:'" + addr + "' msgTxt: '" + msgTxt + "'");
+            String rosterNamePrefix ="E";
+            if ( (rosterName==null) || (rosterName.trim().isEmpty()) ) { //if blank rosterName, just use address for both
+                rosterName = addr;
+                rosterNamePrefix = "";
+            }
+            // msgTxt will be formatted M0+L1012<;>EACL1012 or M1+S96<;>S96 
+            msgTxt = String.format("M%s+%s<;>%s%s", mainapp.throttleIntToString(whichThrottle), addr, rosterNamePrefix, rosterName);  //add requested loco to this throttle
+            Log.d(threaded_application.applicationName, activityName + ": sendAquireLoco(): sendAcquireLoco: addr:'" + addr + " rosterName: '" + rosterName + "' msgTxt: '" + msgTxt + "'");
             wifiSend(msgTxt);
 
             if (heart.getInboundInterval() > 0 && mainapp.withrottle_version > 0.0 && !heart.isHeartbeatSent()) {
@@ -396,22 +384,20 @@ public class comm_thread extends Thread {
             }
 
         } else { //DCC-EX
-            if (!address.equals("*")) {
+            if (!addr.equals("*")) {
                 if (whichThrottle<mainapp.maxThrottles) {
-                    msgTxt = String.format("<t %s>", address.substring(1));  //add requested loco to this throttle
+                    msgTxt = String.format("<t %s>", addr.substring(1));  //add requested loco to this throttle
 
                     Consist con = mainapp.consists[whichThrottle];
-                    con.setConfirmed(address); // don't wait for confirmation
-                    con.setWhichSource(address, con.getLoco(address).getIsFromRoster() ? source_type.ROSTER : source_type.ADDRESS);
-                    mainapp.addLocoToRecents(con.getLoco(address)); //DCC-EX
-//                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.WIFI_SEND, msgTxt);
+                    con.setConfirmed(addr); // don't wait for confirmation
+                    con.setWhichSource(addr, con.getLoco(addr).getIsFromRoster() ? source_type.ROSTER : source_type.ADDRESS);
+                    mainapp.addLocoToRecents(con.getLoco(addr)); //DCC-EX
                     wifiSend(msgTxt);
 
 //                    String lead = mainapp.consists[whichThrottle].getLeadAddr();
-                    sendRequestRosterLocoDetails(address); // get the CS to resend the Loco details so we can get the functions
+                    sendDccexRequestRosterLocoDetails(addr); // get the CS to resend the Loco details so we can get the functions
 
                     if (heart.getInboundInterval() > 0 && mainapp.withrottle_version > 0.0 && !heart.isHeartbeatSent()) {
-//                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.SEND_HEARTBEAT_START);
                         mainapp.alertCommHandlerWithBundle(message_type.SEND_HEARTBEAT_START);
                     }
                     mainapp.alertActivitiesWithBundle(message_type.REFRESH_FUNCTIONS, 1000L);
@@ -420,19 +406,19 @@ public class comm_thread extends Thread {
                     bundle.putInt(alert_bundle_tag_type.SPEED_STEPS,1);
                     mainapp.alertActivitiesWithBundle(message_type.RECEIVED_THROTTLE_SET_SPEED_STEP, bundle);
 
+                    Log.d(threaded_application.applicationName, activityName + ": sendAcquireLoco(): DCC-EX: " + msgTxt);
+
                 } else {  // not a valid throttle. related to the roster download
-                    sendRequestRosterLocoDetails(address);
+                    sendDccexRequestRosterLocoDetails(addr);
                 }
             } else { // requesting the loco id on the programming track.  Using the DCC-EX driveway feature
                 requestLocoIdForWhichThrottleDCCEX = whichThrottle;
                 wifiSend("<R>");
             }
-
-//            Log.d(threaded_application.applicationName, activityName + ": sendAcquireLoco(): DCC-EX: " + msgTxt);
         }
     }
 
-    protected static void sendRequestRosterLocoDetails(String addr) {
+    protected static void sendDccexRequestRosterLocoDetails(String addr) {
         if (mainapp.isDccexProtocol()) { // only relevant to DCC-EX
             wifiSend("<JR " + addr.substring(1) + ">");
         }
@@ -488,15 +474,16 @@ public class comm_thread extends Thread {
                 String addr = l.getAddress();
                 String roster_name = l.getRosterName();
                 if (roster_name != null)  // add roster selection info if present
-                    addr += "<;>" + roster_name;
+//                    addr += "<;>" + roster_name;
 //                sendAcquireLoco(addr, whichThrottle, delays * WITHROTTLE_SPACING_INTERVAL); //ask for next loco, with 0 or more delays
 //                sendAcquireLoco(addr, whichThrottle, 0); //ask for next loco, with 0 or more delays
-                sendAcquireLoco(addr, whichThrottle); //ask for next loco, with 0 or more delays
+                sendAcquireLoco(addr, roster_name, whichThrottle); //ask for next loco, with 0 or more delays
 //                delays++;
             }
         }
     }
 
+    // WiThrottle and DCC-EX
     protected void sendEStop(int whichThrottle) {
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
             wifiSend(String.format("M%sA*<;>X", mainapp.throttleIntToString(whichThrottle)));  //send eStop request
@@ -514,6 +501,7 @@ public class comm_thread extends Thread {
         sendSpeed(whichThrottle, -1); // -1 = EStop
     }
 
+    // WiThrottle and DCC-EX
     protected void sendDisconnect() {
         Log.d(threaded_application.applicationName, activityName + ": sendDisconnect(): ");
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
@@ -538,18 +526,17 @@ public class comm_thread extends Thread {
         }
     }
 
-    protected void sendFunction(char cWhichThrottle, String addr, int fn, int fState) {
-        sendFunction(mainapp.throttleCharToInt(cWhichThrottle), addr, fn, fState, false);
-    }
-
+// Keep these here in case we find a need for them later    
+//    protected void sendFunction(char cWhichThrottle, String addr, int fn, int fState) {
+//        sendFunction(mainapp.throttleCharToInt(cWhichThrottle), addr, fn, fState, false);
+//    }
 //    protected void sendFunction(char cWhichThrottle, String addr, int fn, int fState, boolean force) {
 //        sendFunction(mainapp.throttleCharToInt(cWhichThrottle), addr, fn, fState);
 //    }
-
 //    protected void sendFunction(int whichThrottle, String addr, int fn, int fState) {
 //        sendFunction(whichThrottle, addr, fn, fState, false);
 //    }
-
+// WiThrottle and DCC-EX
     @SuppressLint("DefaultLocale")
     protected void sendFunction(int whichThrottle, String addr, int fn, int fState, boolean force) {
 
@@ -629,83 +616,79 @@ public class comm_thread extends Thread {
         }
     }
 
-    protected static void sendRequestRoster() {
+    protected static void sendDccexRequestRoster() {
         if (mainapp.isDccexProtocol() && !mainapp.dccexRosterRequested) { // only once, should not change
             mainapp.dccexRosterRequested = true;
             String msgTxt = "<JR>";
             wifiSend(msgTxt);
-//          mainapp.dccexRosterFullyReceived = false;
-//          Log.d(threaded_application.applicationName, activityName + ": sendRequestRoster(): DCC-EX: " + msgTxt);
+//          Log.d(threaded_application.applicationName, activityName + ": sendDccexRequestRoster(): DCC-EX: " + msgTxt);
         }
     }
 
-    protected static void sendRequestTurnouts() {
+    protected static void sendDccexRequestTurnouts() {
         if (mainapp.isDccexProtocol() && !mainapp.dccexTurnoutsRequested) { // only once, should not change
             mainapp.dccexTurnoutsRequested = true;
             mainapp.dccexTurnoutsBeingProcessed = false;
             String msgTxt = "<JT>";
             wifiSend(msgTxt);
-//          mainapp.dccexTurnoutsFullyReceived = false;
-//          Log.d(threaded_application.applicationName, activityName + ": sendRequestTurnouts(): DCC-EX: " + msgTxt);
+//          Log.d(threaded_application.applicationName, activityName + ": sendDccexRequestTurnouts(): DCC-EX: " + msgTxt);
         }
     }
 
-    protected static void sendRequestRoutes() {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            mainapp.dccexRoutesBeingProcessed = false;
-            String msgTxt = "<JA>";
+    protected static void sendDccexRequestRoutes() {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+
+        mainapp.dccexRoutesBeingProcessed = false;
+        String msgTxt = "<JA>";
+        wifiSend(msgTxt);
+//            Log.d(threaded_application.applicationName, activityName + ": sendDccexRequestRoutes(): DCC-EX: " + msgTxt);
+    }
+
+    protected static void sendDccexRequestTracks() {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+        
+        float vn = mainapp.getDccexVersionNumeric();
+
+        if (vn >= 04.002007) {  /// need to remove the track manager option
+            String msgTxt = "<=>";
             wifiSend(msgTxt);
-//            mainapp.dccexRoutesRequested = true;
-//            mainapp.dccexRoutesFullyReceived = false;
-//            Log.d(threaded_application.applicationName, activityName + ": sendRequestRoutes(): DCC-EX: " + msgTxt);
+//            Log.d(threaded_application.applicationName, activityName + ": sendDccexRequestTracks() DCC-EX: " + msgTxt);
         }
     }
 
-    protected static void sendRequestTracks() {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            float vn = mainapp.getDccexVersionNumeric();
+    protected static void sendDccexTrackPower(char track, int powerState) {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+        
+        String msgTxt = "<" + (powerState) + " " + track + ">";
+        wifiSend(msgTxt);
+    }
 
-            if (vn >= 04.002007) {  /// need to remove the track manager option
-                String msgTxt = "<=>";
-                wifiSend(msgTxt);
-//            Log.d(threaded_application.applicationName, activityName + ": sendRequestTracks() DCC-EX: " + msgTxt);
+    protected static void sendDccexTrack(char track, String type, int id) {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+        
+        String msgTxt = "";
+        boolean needsId = false;
+        for (int i=0; i<TRACK_TYPES.length; i++) {
+            if (type.equals(TRACK_TYPES[i])) {
+                needsId = TRACK_TYPES_NEED_ID[i];
+                break;
             }
         }
-    }
-
-    protected static void sendTrackPower(char track, int powerState) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            String msgTxt = "<" + (powerState) + " " + track + ">";
+        if (!needsId) {
+            msgTxt = msgTxt + "<= " + track + " "+ type + ">";
+            wifiSend(msgTxt);
+        } else {
+            msgTxt = msgTxt + "<= " + track + " "+ type + " " + id + ">";
             wifiSend(msgTxt);
         }
-    }
-
-    protected static void sendTrack(char track, String type, int id) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            String msgTxt = "";
-            boolean needsId = false;
-            for (int i=0; i<TRACK_TYPES.length; i++) {
-                if (type.equals(TRACK_TYPES[i])) {
-                    needsId = TRACK_TYPES_NEED_ID[i];
-                    break;
-                }
-            }
-            if (!needsId) {
-                msgTxt = msgTxt + "<= " + track + " "+ type + ">";
-                wifiSend(msgTxt);
-            } else {
-                msgTxt = msgTxt + "<= " + track + " "+ type + " " + id + ">";
-                wifiSend(msgTxt);
-            }
 //            Log.d(threaded_application.applicationName, activityName + ": sendTracks() DCC-EX: " + msgTxt);
-        }
     }
 
     protected static void sendDccexJoinTracks() {
         sendDccexJoinTracks(true);
     }
     protected static void sendDccexJoinTracks(boolean join) {
-        if (mainapp.isWiThrottleProtocol()) return;
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
 
         if (join) {
             wifiSend("<1 JOIN>");
@@ -719,18 +702,20 @@ public class comm_thread extends Thread {
         sendDccexEmergencyStopPauseResume(true);
     }
     protected static void sendDccexEmergencyStopPauseResume(boolean pause) {
-        if (mainapp.isWiThrottleProtocol()) return;
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
 
         wifiSend("<!" + (pause ? "P" : "R" )+ ">");
     }
 
     protected static void sendDccexRequestInCommandStationConsistList() {
-        if (mainapp.isWiThrottleProtocol()) return;
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+        
         wifiSend("<^>");
         if (mainapp.dccexInCommandStationConsists != null) mainapp.dccexInCommandStationConsists.clear();
     }
 
-protected void sendTurnout(String systemName, char action) {
+    // WiThrottle and DCC-EX
+    protected void sendTurnout(String systemName, char action) {
 //        Log.d(threaded_application.applicationName, activityName + ": sendTurnout(): cmd=" + cmd);
         String cs = mainapp.getTurnoutState(systemName);
         if (cs == null) cs = ""; //avoid npe
@@ -772,8 +757,9 @@ protected void sendTurnout(String systemName, char action) {
         }
     }
 
+    // WiThrottle and DCC-EX
     protected void sendRoute(String systemName, char action) {
-        if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
+        if (mainapp.isWiThrottleProtocol()) { // WiThrottle
             wifiSend("PRA" + action + systemName);
 
         } else { //DCC-EX    Route: </START id>      Automation: </START addr id>
@@ -782,16 +768,18 @@ protected void sendTurnout(String systemName, char action) {
         }
     }
 
-// action is always ='2' but is currently unused
-@SuppressLint("DefaultLocale")
-protected void sendAutomation(String systemName, char action, int automationLoco) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only      Automation: </START addr id>
-            String msgTxt = String.format("</START %d %s>", automationLoco, systemName);
-            wifiSend(msgTxt);
-            Log.d(threaded_application.applicationName, activityName + ": sendAutomation(): DCC-EX: " + msgTxt);
-        }
+    // action is always ='2' but is currently unused
+    @SuppressLint("DefaultLocale")
+    protected void sendDccexAutomation(String systemName, char action, int automationLoco) {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+        
+        //Automation: </START addr id>
+        String msgTxt = String.format("</START %d %s>", automationLoco, systemName);
+        wifiSend(msgTxt);
+        Log.d(threaded_application.applicationName, activityName + ": sendDccexAutomation(): DCC-EX: " + msgTxt);
     }
 
+    // WiThrottle and DCC-EX
     @SuppressLint("DefaultLocale")
     protected void sendPower(int powerState) {
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
@@ -814,22 +802,23 @@ protected void sendAutomation(String systemName, char action, int automationLoco
 
     @SuppressLint("DefaultLocale")
     protected void sendPower(int pState, int track) {  // DCC-EX only
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+        
         char trackLetter = (char) ('A' + track);
-        if (mainapp.isDccexProtocol()) { //DCC-EX
-            String msgTxt = String.format("<%d %s>", pState, trackLetter);
-            wifiSend(msgTxt);
+        String msgTxt = String.format("<%d %s>", pState, trackLetter);
+        wifiSend(msgTxt);
 //            Log.d(threaded_application.applicationName, activityName + ": sendPower(): DCC-EX: " + msgTxt);
-        }
     }
 
     protected void sendQuit() {
         Log.d(threaded_application.applicationName, activityName + ": sendQuit(): ");
-        if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
+        if (mainapp.isWiThrottleProtocol()) { // WiThrottle
             if (socketWiT != null && socketWiT.SocketGood())
                 wifiSend("Q");
         } /// N/A for DCC-EX
     }
 
+    // WiThrottle and DCC-EX
     protected void sendHeartbeatStart() {
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
             if (socketWiT != null && socketWiT.SocketGood())
@@ -843,6 +832,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
         }
     }
 
+    // WiThrottle and DCC-EX
     @SuppressLint("DefaultLocale")
     protected void sendDirection(int whichThrottle, String addr, int dir) {
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
@@ -877,6 +867,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
         sendSpeed(whichThrottle, 0);
     }
 
+    // WiThrottle and DCC-EX
     @SuppressLint("DefaultLocale")
     protected static void sendSpeed(int whichThrottle, int speed) {
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
@@ -939,7 +930,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
 
     @SuppressLint("DefaultLocale")
     protected static void sendRequestSpeedAndDir(int whichThrottle) {
-        if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
+        if (mainapp.isWiThrottleProtocol()) { // WiThrottle
             wifiSend(String.format("M%sA*<;>qV", mainapp.throttleIntToString(whichThrottle)));
             wifiSend(String.format("M%sA*<;>qR", mainapp.throttleIntToString(whichThrottle)));
 
@@ -955,90 +946,90 @@ protected void sendAutomation(String systemName, char action, int automationLoco
     }
 
     @SuppressLint("DefaultLocale")
-    public static void sendWriteDecoderAddress(int addr) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            String msgTxt = String.format("<W %s>", addr);
-            wifiSend(msgTxt);
-        }
+    public static void sendDccexWriteDecoderAddress(int addr) {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+
+        String msgTxt = String.format("<W %s>", addr);
+        wifiSend(msgTxt);
     }
 
     @SuppressLint("DefaultLocale")
-    public static void sendReadCv(int cv) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            String msgTxt = String.format("<R %d>", cv);
-            wifiSend(msgTxt);
-        }
+    public static void sendDccexReadCv(int cv) {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+
+        String msgTxt = String.format("<R %d>", cv);
+        wifiSend(msgTxt);
     }
 
     @SuppressLint("DefaultLocale")
-    public static void sendWriteCv(int cv, int cvValue) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            String msgTxt = String.format("<W %d %d>", cv, cvValue);
-            wifiSend(msgTxt);
-        }
+    public static void sendDccexWriteCv(int cv, int cvValue) {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+
+        String msgTxt = String.format("<W %d %d>", cv, cvValue);
+        wifiSend(msgTxt);
     }
 
     @SuppressLint("DefaultLocale")
-    public static void sendWritePomCv(int cv, int cvValue, int addr) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            String msgTxt = String.format("<w %d %d %d>", addr, cv, cvValue);
-            wifiSend(msgTxt);
-        }
+    public static void sendDccexWritePomCv(int cv, int cvValue, int addr) {
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+
+        String msgTxt = String.format("<w %d %d %d>", addr, cv, cvValue);
+        wifiSend(msgTxt);
     }
 
     @SuppressLint("DefaultLocale")
     public static void sendWriteDirectDccCommand(String [] args) {
-        if (mainapp.isWiThrottleProtocol()) { // WiThrottle only
-            String msgTxt = "";
-            if (args.length==5) {
-                msgTxt = String.format("D2%s %s %s %s %s", args[0], args[1], args[2], args[3], args[4] );
-            } else if (args.length==6) {
-                msgTxt = String.format("D2%s %s %s %s %s %s", args[0], args[1], args[2], args[3], args[4], args[5] );
-            }
-            wifiSend(msgTxt);
+        if (mainapp.isDccexProtocol()) return; // WiThrottle only
 
-            Bundle bundle = new Bundle();
-            bundle.putString(alert_bundle_tag_type.COMMAND,msgTxt);
-            mainapp.alertActivitiesWithBundle(message_type.WRITE_DIRECT_DCC_COMMAND_ECHO, bundle, activity_id_type.WITHROTTLE_CV_PROGRAMMER);
+        String msgTxt = "";
+        if (args.length==5) {
+            msgTxt = String.format("D2%s %s %s %s %s", args[0], args[1], args[2], args[3], args[4] );
+        } else if (args.length==6) {
+            msgTxt = String.format("D2%s %s %s %s %s %s", args[0], args[1], args[2], args[3], args[4], args[5] );
         }
+        wifiSend(msgTxt);
+
+        Bundle bundle = new Bundle();
+        bundle.putString(alert_bundle_tag_type.COMMAND,msgTxt);
+        mainapp.alertActivitiesWithBundle(message_type.WRITE_DIRECT_DCC_COMMAND_ECHO, bundle, activity_id_type.WITHROTTLE_CV_PROGRAMMER);
     }
 
     @SuppressLint("DefaultLocale")
     public static void sendDccexCommand(String msgTxt) {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only
-            wifiSend(msgTxt);
-        }
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+
+        wifiSend(msgTxt);
     }
 
     @SuppressLint("DefaultLocale")
     public static void sendDccexGetLocoAddress() {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only  from version 5.4.44
-            wifiSend("<R LOCOID>");
-        }
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
+
+        wifiSend("<R LOCOID>");
     }
 
     @SuppressLint("DefaultLocale")
     public static void sendDccexGetConsistAddress() {
-        if (mainapp.isDccexProtocol()) { // DCC-EX only  from version 5.4.44
-            wifiSend("<R CONSIST>");
-        }
+        if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only  from version 5.4.44
+
+        wifiSend("<R CONSIST>");
     }
 
     @SuppressLint("DefaultLocale")
     public static void sendAdvancedConsistAddLoco(String consistIdString, String consistName, String locoIdString, int facing) {
+        if (mainapp.isDccexProtocol()) return; // WiThrottle only
+
         String facingString = (facing==0) ? "true" : "false";
-        if (mainapp.isWiThrottleProtocol()) { // WiThrottle only
-            String msgTxt = String.format("RC+<;>%s<;>%s<:>%s<;>%s", consistIdString, consistName, locoIdString, facingString);  //consist address + loco to add + direction (true or false)
-            wifiSend(msgTxt);
-        }
+        String msgTxt = String.format("RC+<;>%s<;>%s<:>%s<;>%s", consistIdString, consistName, locoIdString, facingString);  //consist address + loco to add + direction (true or false)
+        wifiSend(msgTxt);
     }
 
     @SuppressLint("DefaultLocale")
     public static void sendAdvancedConsistRemoveLoco(String consistIdString, String locoIdString) {
-        if (mainapp.isWiThrottleProtocol()) { // WiThrottle only
-            String msgTxt = String.format("RC-<;>%s<:>%s", consistIdString, locoIdString);  //consist address + loco to remove
-            wifiSend(msgTxt);
-        }
+        if (mainapp.isDccexProtocol()) return; // WiThrottle only
+
+        String msgTxt = String.format("RC-<;>%s<:>%s", consistIdString, locoIdString);  //consist address + loco to remove
+        wifiSend(msgTxt);
     }
 
     @SuppressLint("DefaultLocale")
@@ -1126,11 +1117,11 @@ protected void sendAutomation(String systemName, char action, int automationLoco
 
     @SuppressLint("DefaultLocale")
     public static void sendAdvancedConsistRemoveConsist(String [] args) {
-        if (mainapp.isWiThrottleProtocol()) { // WiThrottle only
-            if (args.length==1) {
-                String msgTxt = String.format("RCR<;>%s", args[0]);  //consist address to remove
-                wifiSend(msgTxt);
-            }
+        if (mainapp.isDccexProtocol()) return; // WiThrottle only
+
+        if (args.length==1) {
+            String msgTxt = String.format("RCR<;>%s", args[0]);  //consist address to remove
+            wifiSend(msgTxt);
         }
     }
 
@@ -1252,6 +1243,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                                     bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                                     bundle.putInt(alert_bundle_tag_type.SPEED, speedWiT);
                                     mainapp.alertActivitiesWithBundle(message_type.RECEIVED_THROTTLE_SET_SPEED, bundle, activity_id_type.THROTTLE);
+                                    skipDefaultAlertToAllActivities = true;
                                 } catch (Exception ignored) {
                                 }
 
@@ -1266,6 +1258,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                                 bundle.putInt(alert_bundle_tag_type.DIRECTION, dir);
                                 bundle.putString(alert_bundle_tag_type.LOCO, addr);
                                 mainapp.alertActivitiesWithBundle(message_type.RECEIVED_THROTTLE_SET_DIRECTION, bundle, activity_id_type.THROTTLE);
+                                skipDefaultAlertToAllActivities = true;
 
                             } else if (com3 == 'F') {
                                 try {
@@ -1282,6 +1275,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                                     bundle.putInt(alert_bundle_tag_type.FUNCTION, function);
                                     bundle.putInt(alert_bundle_tag_type.FUNCTION_ACTION, action);
                                     mainapp.alertActivitiesWithBundle(message_type.RECEIVED_THROTTLE_SET_FUNCTION, bundle, activity_id_type.THROTTLE);
+                                    skipDefaultAlertToAllActivities = true;
 
                                 } catch (Exception e) {
                                 // ignore
@@ -1291,6 +1285,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                                     int speedStepCode = Integer.parseInt(ls[1].substring(1));
                                     bundle.putInt(alert_bundle_tag_type.SPEED_STEPS, speedStepCode);
                                     mainapp.alertActivitiesWithBundle(message_type.RECEIVED_THROTTLE_SET_SPEED_STEP, bundle, activity_id_type.THROTTLE);
+                                    skipDefaultAlertToAllActivities = true;
 
                                 } catch (Exception ignored) {
                                 }
@@ -1303,6 +1298,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                         bundle.putString(alert_bundle_tag_type.LOCO, addr);
                         bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                         mainapp.alertActivitiesWithBundle(message_type.RECEIVED_REQ_STEAL, bundle, activity_id_type.THROTTLE);
+                        skipDefaultAlertToAllActivities = true;
                     }
 
                     break;
@@ -1501,6 +1497,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                                 String[] ta = threaded_application.splitByString(responseStr.substring(3), "<;>"); //get the number between "PFT" and the "<;>"
                                 try {
                                     mainapp.fastClockSeconds = Long.parseLong(ta[0]);
+                                    skipDefaultAlertToAllActivities = true;
                                 } catch (NumberFormatException e) {
                                     Log.w("Engine_Driver", "unable to extract fastClockSeconds from '" + responseStr + "'");
                                 }
@@ -1811,7 +1808,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
             bundle.putString(alert_bundle_tag_type.COMMAND, responseStr);
             mainapp.alertActivitiesWithBundle(message_type.RESPONSE, bundle);  //send response to running activities
 
-            Log.d(threaded_application.applicationName, activityName + ": processWifiResponse(): Unable to proceess command: " + responseStr);
+            Log.d(threaded_application.applicationName, activityName + ": processWifiResponse(): Unable to process command: " + responseStr);
         }
     }  //end of processWifiResponse
 
@@ -2207,8 +2204,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                         con.setConfirmed(addrStr);
                         mainapp.addLocoToRecents(conLoco); //DCC-EX
 
-//                    sendAcquireLoco(addrStr, requestLocoIdForWhichThrottleDCCEX, 0);
-                        sendAcquireLoco(addrStr, requestLocoIdForWhichThrottleDCCEX);
+                        sendAcquireLoco(addrStr, rn, requestLocoIdForWhichThrottleDCCEX);
                         sendDccexJoinTracks(true);
                         mainapp.alertActivitiesWithBundle(message_type.REQUEST_REFRESH_THROTTLE, activity_id_type.THROTTLE);
                     }
@@ -2263,7 +2259,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
         if (args != null) {
             if (args.length == 0) { // empty roster
                 if (prefs.getBoolean("prefDccexSequenceItemRequests", false))
-                    sendRequestTurnouts();
+                    sendDccexRequestTurnouts();
             } else {
                 if ((args.length < 3) || (args[2].charAt(0) != '"')) {  // loco list
 //                    if (mainapp.dccexRosterString.isEmpty()) {
@@ -2317,7 +2313,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
 //                            mainapp.dccexRosterFullyReceived = true;
                                 mainapp.safeToastInstructional(R.string.roster_available, LENGTH_SHORT);
                                 if (prefs.getBoolean("prefDccexSequenceItemRequests", false))
-                                    sendRequestTurnouts();
+                                    sendDccexRequestTurnouts();
                             }
                         }
 
@@ -2502,7 +2498,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                 if ( args.length == 1) { // no turnouts
                     noTurnouts = true;
                     if (prefs.getBoolean("prefDccexSequenceItemRequests",false))
-                        sendRequestRoutes();
+                        sendDccexRequestRoutes();
                 } else {
                     for (int i = 0; i < mainapp.dccexTurnoutIDs.length; i++) {
                         if (mainapp.dccexTurnoutIDs[i] == Integer.parseInt(args[1])) {
@@ -2555,7 +2551,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                     mainapp.dccexTurnoutsFullyReceived = true;
                     mainapp.safeToastInstructional(R.string.turnouts_available, LENGTH_SHORT);
                     if (prefs.getBoolean("prefDccexSequenceItemRequests",false))
-                        sendRequestRoutes();
+                        sendDccexRequestRoutes();
                 }
 
             } else { // turnouts list  <jT id1 id2 id3 ...>
@@ -2643,7 +2639,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
                 if ( args.length == 1) { // no Routes
                     noRoutes = true;
                     if (prefs.getBoolean("prefDccexSequenceItemRequests",false))
-                        sendRequestTracks();
+                        sendDccexRequestTracks();
                 } else {
                     for (int i = 0; i < mainapp.dccexRouteIDs.length; i++) {
                         if (mainapp.dccexRouteIDs[i] == Integer.parseInt(args[1])) {
@@ -2700,7 +2696,7 @@ protected void sendAutomation(String systemName, char action, int automationLoco
 //                    mainapp.dccexRoutesFullyReceived = true;
                     mainapp.safeToastInstructional(R.string.routes_available, LENGTH_SHORT);
                     if (prefs.getBoolean("prefDccexSequenceItemRequests",false))
-                        sendRequestTracks();
+                        sendDccexRequestTracks();
                 }
 
             } else { // routes list   <jA id1 id2 id3 ...>   or <jA> for empty

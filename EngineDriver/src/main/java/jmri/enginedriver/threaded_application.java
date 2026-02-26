@@ -481,6 +481,9 @@ public class threaded_application extends Application {
 
     public int[] soundsLocoSteps = new int[2];
 
+    // this needs to be in t_a because to it checked each time the sounds reschedule
+    public boolean [] soundsIsMuted;
+
     public ArrayList<String> iplsNames;
     public ArrayList<String> iplsFileNames;
 

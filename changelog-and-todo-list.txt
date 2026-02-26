@@ -1,6 +1,7 @@
 **Version 2.42.220
  * Bug fixes
     * Bug fix for the Consist Edit and Consist Light Edit screens on early versions of Android
+    * Bug fix for muted IPLS sounds restarting when going to another screen
  * Other
     * Improve comms to the reconnect screen.  Previously, many messages would not have been considered a successful reconnect
     * Major changes in the way that inter-activity communication works (now uses Bundles)
@@ -1062,8 +1063,12 @@
  *   TODO: add "Check for Updates" link to first menu and to About page.
  *   TODO: Add DCC-EX to "Auto-connect to first server?"
  *   TODO: Why does the first connection attempt fail sometimes
+ * disconnect/reconnect
+ *   TODO: On reconnect, consider dropping all locos from the throttles and reacquiring them (like reloading saved locos)
  * at connection or close connection / exit app
  *   TODO: add option to save and automatically load locos on connection to be server specific
+ * disconnect/reconnect
+ *   TODO: On reconnect, consider dropping all locos from the throttles and reacquiring them (like reloading saved locos)
  * threaded_application
  *   TODO: verify MRC fastclock messages
  *   TODO: when MT+ received, if the loco is in a consist, request the consist address also
@@ -1071,7 +1076,6 @@
  *   TODO: check for error on send and do something with it
  * throttle:
  *   TODO: Add option to send a real eStop
- *   TODO: Add option is use the new eStop/Resume feature in DCC-EX. commands: <!P> and <!R>
  *   TODO: If server returns Roster with empty function list, don't show the ED defaults, see MRC
  *   TODO: add random speed adjustments (to avoid monotonous sound)
  *   TODO: add voice control

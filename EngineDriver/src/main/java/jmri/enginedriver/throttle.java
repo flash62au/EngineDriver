@@ -406,7 +406,7 @@ public class throttle extends AppCompatActivity implements
     protected boolean[] limitedJump = {false, false, false, false, false, false};
 
     protected Button[] bMutes;
-    protected boolean[] soundsIsMuted = {false, false};
+//    soundsIsMuted array moved to t_a
     protected Button[][] bSoundsExtras;
 
     protected int sliderType = slider_type.HORIZONTAL;
@@ -1103,7 +1103,7 @@ public class throttle extends AppCompatActivity implements
 
                 case message_type.SOUNDS_FORCE_LOCO_SOUNDS_TO_START:
                     for (int throttleIndex = 0; (throttleIndex < threaded_application.SOUND_MAX_SUPPORTED_THROTTLES) && (throttleIndex < mainapp.maxThrottlesCurrentScreen); throttleIndex++) {
-                        if(ipls!=null) ipls.doLocoSound(throttleIndex, getSpeedFromCurrentSliderPosition(throttleIndex, false), dirs[throttleIndex], soundsIsMuted[throttleIndex]);
+                        if(ipls!=null) ipls.doLocoSound(throttleIndex, getSpeedFromCurrentSliderPosition(throttleIndex, false), dirs[throttleIndex], mainapp.soundsIsMuted[throttleIndex]);
                     }
                     break;
 
@@ -1964,7 +1964,7 @@ public class throttle extends AppCompatActivity implements
         disableButtons(whichThrottle);         // direction and slider
         set_function_labels_and_listeners_for_view(whichThrottle);
         setLabels();
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
 
     void queryAllSpeedsAndDirectionsWiT() {
@@ -2004,7 +2004,7 @@ public class throttle extends AppCompatActivity implements
                 }
             }
         }
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
 
     SeekBar getThrottleSlider(int whichThrottle) {
@@ -2091,7 +2091,7 @@ public class throttle extends AppCompatActivity implements
         threaded_application.extendedLogging(activityName + ": speedChange():  change: " + change + " speed: " + speed+ " scaleSpeed: " + scaleSpeed);
 
         throttle_slider.setProgress(speed);
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
         return speed;
     }
 
@@ -2138,7 +2138,7 @@ public class throttle extends AppCompatActivity implements
                 speedUpdateAndNotify(whichThrottle, speed);
                 break;
         }
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
 
     public void decrementSpeed(int whichThrottle, int from) {
@@ -2217,7 +2217,7 @@ public class throttle extends AppCompatActivity implements
                         , "");
                 break;
         }
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
 
     public void incrementSpeed(int whichThrottle, int from) {
@@ -2291,7 +2291,7 @@ public class throttle extends AppCompatActivity implements
         }
 
         kidsTimerActions(kids_timer_action_type.STARTED, 0);
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
 
     } // end incrementSpeed
 
@@ -2351,7 +2351,7 @@ public class throttle extends AppCompatActivity implements
             threaded_application.extendedLogging(activityName + ": speedUpdateAndNotify(): ESU_MCII: Move knob request for speed update");
             setEsuThrottleKnobPosition(whichThrottle, speed);
         }
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
 
     // change speed slider by scaled value and notify server
@@ -2364,7 +2364,7 @@ public class throttle extends AppCompatActivity implements
             threaded_application.extendedLogging(activityName + ": speedChangeAndNotify(): ESU_MCII: Move knob request for speed change");
             setEsuThrottleKnobPosition(whichThrottle, speed);
         }
-        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
 
     // set the displayed numeric speed value
@@ -2608,7 +2608,7 @@ public class throttle extends AppCompatActivity implements
 
             showDirectionRequest(whichThrottle, direction);        // update requested direction indication
             setEngineDirection(whichThrottle, direction, false);   // update direction for each engine on this throttle
-            if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+            if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
         }
         return (getDirection(whichThrottle) == direction);
     }
@@ -2979,7 +2979,7 @@ public class throttle extends AppCompatActivity implements
         showHideSpeedLimitAndPauseButtons(whichThrottle);
         if (!newEnabledState) {
             sbs[whichThrottle].setProgress(0); // set slider to 0 if disabled
-            if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+            if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
         }
         sbs[whichThrottle].setEnabled(newEnabledState);
 
@@ -3465,9 +3465,9 @@ public class throttle extends AppCompatActivity implements
                 break;
             }
             case gamepad_or_keyboard_event_type.IPLS_MUTE: {
-                soundsIsMuted[whichThrottle] = !soundsIsMuted[whichThrottle];
-                setSoundButtonState(bMutes[whichThrottle], soundsIsMuted[whichThrottle]);
-                if(ipls!=null) ipls.muteUnmuteCurrentSounds(whichThrottle, soundsIsMuted[whichThrottle]);
+                mainapp.soundsIsMuted[whichThrottle] = !mainapp.soundsIsMuted[whichThrottle];
+                setSoundButtonState(bMutes[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
+                if(ipls!=null) ipls.muteUnmuteCurrentSounds(whichThrottle, mainapp.soundsIsMuted[whichThrottle]);
                 break;
             }
             case gamepad_or_keyboard_event_type.IPLS_BELL_TOGGLE: {
@@ -5240,9 +5240,9 @@ public class throttle extends AppCompatActivity implements
 
             if (!mainapp.prefDeviceSounds[whichThrottle].equals("none")) {
                 if (!mainapp.soundsDeviceButtonStates[whichThrottle][soundTypeArrayIndex]) {
-                    if(ipls!=null) ipls.startBellHornSound(soundType, whichThrottle, soundsIsMuted[whichThrottle]);
+                    if(ipls!=null) ipls.startBellHornSound(soundType, whichThrottle, mainapp.soundsIsMuted[whichThrottle]);
                 } else {
-                    if(ipls!=null) ipls.stopBellHornSound(soundType, whichThrottle, soundsIsMuted[whichThrottle]);
+                    if(ipls!=null) ipls.stopBellHornSound(soundType, whichThrottle, mainapp.soundsIsMuted[whichThrottle]);
                 }
             }
         }
@@ -5430,12 +5430,12 @@ public class throttle extends AppCompatActivity implements
                     }
                     sendSpeedMsg(whichThrottle, speed);
                     setDisplayedSpeed(whichThrottle, speed);
-                    if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+                    if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
 
                 } else {                      // got a touch while processing limitJump
                     speed = lastSpeed;    //   so suppress multiple touches
                     throttle.setProgress(lastSpeed);
-                    if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+                    if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
                 }
                 // Now update ESU MCII Knob position
                 if (IS_ESU_MCII && !isSemiRealisticThrottle) {
@@ -5451,7 +5451,7 @@ public class throttle extends AppCompatActivity implements
                         setAutoIncrementOrDecrement(whichThrottle, auto_increment_or_decrement_type.OFF);
                         limitedJump[whichThrottle] = false;
                         throttle.setProgress(jumpSpeed);
-                        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], soundsIsMuted[whichThrottle]);
+                        if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
                     }
                 }
                 setDisplayedSpeed(whichThrottle, speed);
@@ -5662,7 +5662,7 @@ public class throttle extends AppCompatActivity implements
                     importExportPreferences.loadThrottlesEnginesListFromFile(mainapp, getApplicationContext());
                     setLabels();
                 }
-            }, 2000);
+            }, 3000);
         }
 
         setContentView(mainapp.throttleLayoutViewId); // default.  Will likely be overridden by the child activities
@@ -6276,7 +6276,9 @@ public class throttle extends AppCompatActivity implements
         isPauseSpeeds = new int[mainapp.maxThrottlesCurrentScreen];
 
         bMutes = new Button[mainapp.maxThrottlesCurrentScreen];
-        soundsIsMuted = new boolean[mainapp.maxThrottlesCurrentScreen];
+//        soundsIsMuted = new boolean[mainapp.maxThrottlesCurrentScreen];
+        mainapp.soundsIsMuted = new boolean[mainapp.maxThrottlesCurrentScreen];
+        for (int i=0; i<mainapp.maxThrottlesCurrentScreen; i++ ) mainapp.soundsIsMuted[i] = false;
         bSoundsExtras = new Button[3][mainapp.maxThrottlesCurrentScreen];
 
         tvGamePads = new TextView[mainapp.maxThrottlesCurrentScreen];
@@ -8007,12 +8009,12 @@ public class throttle extends AppCompatActivity implements
                 v.playSoundEffect(SoundEffectConstants.CLICK);
             }
             if (event.getAction() == MotionEvent.ACTION_UP) {
-                soundsIsMuted[whichThrottle] = !soundsIsMuted[whichThrottle];
-                setSoundButtonState(bMutes[whichThrottle], soundsIsMuted[whichThrottle]);
+                mainapp.soundsIsMuted[whichThrottle] = !mainapp.soundsIsMuted[whichThrottle];
+                setSoundButtonState(bMutes[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
             } else if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 mainapp.buttonVibration();
             }
-            if(ipls!=null) ipls.muteUnmuteCurrentSounds(whichThrottle, soundsIsMuted[whichThrottle]);
+            if(ipls!=null) ipls.muteUnmuteCurrentSounds(whichThrottle, mainapp.soundsIsMuted[whichThrottle]);
             return true;
         }
     }
@@ -8108,7 +8110,7 @@ public class throttle extends AppCompatActivity implements
                     bSoundsExtras[sounds_type.BUTTON_HORN][whichThrottle].setVisibility(rslt);
                     bSoundsExtras[sounds_type.BUTTON_HORN_SHORT][whichThrottle].setVisibility(rslt);
                     if (rslt == VISIBLE) {
-                        setSoundButtonState(bMutes[whichThrottle], soundsIsMuted[whichThrottle]);
+                        setSoundButtonState(bMutes[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
                         setSoundButtonState(bSoundsExtras[sounds_type.BUTTON_BELL][whichThrottle], mainapp.soundsDeviceButtonStates[whichThrottle][sounds_type.BUTTON_BELL]);
                         setSoundButtonState(bSoundsExtras[sounds_type.BUTTON_HORN][whichThrottle], mainapp.soundsDeviceButtonStates[whichThrottle][sounds_type.BUTTON_HORN]);
                         setSoundButtonState(bSoundsExtras[sounds_type.BUTTON_HORN_SHORT][whichThrottle], mainapp.soundsDeviceButtonStates[whichThrottle][sounds_type.BUTTON_HORN_SHORT]);
@@ -8127,7 +8129,7 @@ public class throttle extends AppCompatActivity implements
                     bSoundsExtras[sounds_type.BUTTON_HORN][whichThrottle].setEnabled(newEnabledState);
                     bSoundsExtras[sounds_type.BUTTON_HORN_SHORT][whichThrottle].setEnabled(newEnabledState);
                     if (newEnabledState) {
-                        setSoundButtonState(bMutes[whichThrottle], soundsIsMuted[whichThrottle]);
+                        setSoundButtonState(bMutes[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
                     }
                 }
             }

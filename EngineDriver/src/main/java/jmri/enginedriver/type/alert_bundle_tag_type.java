@@ -24,6 +24,7 @@ public interface alert_bundle_tag_type {
     String CONSIST_NAME = "con_name";
     String LOCO = "loco";
     String LOCO_TEXT = "loco_txt";
+    String ROSTER_NAME = "roster_name";
     String SPEED = "speed";
     String FACING = "facing";
     String DIRECTION = "dir";

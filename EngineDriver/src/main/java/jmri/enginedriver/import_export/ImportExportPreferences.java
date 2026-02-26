@@ -988,9 +988,13 @@ public class ImportExportPreferences {
                                     for (int j = 0; j <= consist.size(); j++) {
                                         if (consist.getLoco(locoAddress) != null) {
                                             mainapp.safeToast(context.getResources().getString(R.string.toastLocoAlreadySelected, locoAddress), Toast.LENGTH_SHORT);
+                                            String rosterName = consist.getLoco(locoAddress).getRosterName();
+
                                             // send the acquire message anyway
                                             Bundle bundle = new Bundle();
                                             bundle.putString(alert_bundle_tag_type.LOCO_TEXT, locoAddress);
+                                            if ( ( rosterName!=null) && (!rosterName.isEmpty()) )
+                                                bundle.putString(alert_bundle_tag_type.ROSTER_NAME, rosterName);
                                             bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                                             mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
 
@@ -1004,14 +1008,16 @@ public class ImportExportPreferences {
                                     consist.add(l);
                                     consist.setWhichSource(locoAddress, locoSource);
                                     consist.setTrailAddr(l.getAddress());
+                                    String rosterName = consist.getLoco(locoAddress).getRosterName();
                                     if (i == 0) {
                                         consist.setLeadAddr(l.getAddress());
                                     }
                                     consist.setBackward(locoAddress, locoIsBackwards);
-//                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_LOCO_BY_ADDRESS, locoAddress, whichThrottle);
 
                                     Bundle bundle = new Bundle();
                                     bundle.putString(alert_bundle_tag_type.LOCO_TEXT, locoAddress);
+                                    if ( ( rosterName!=null) && (!rosterName.isEmpty()) )
+                                        bundle.putString(alert_bundle_tag_type.ROSTER_NAME, rosterName);
                                     bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                                     mainapp.alertCommHandlerWithBundle(message_type.REQUEST_LOCO_BY_ADDRESS, bundle);
 
@@ -1332,7 +1338,6 @@ public class ImportExportPreferences {
             String sAddr = locoAddressToString(recentLocoAddressList.get(j),
                     recentLocoAddressSizeList.get(j), true);
             // one past the actual number of allow throttles
-//            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.REQUEST_LOCO_BY_ADDRESS, sAddr, mainapp.maxThrottles);
 
             Bundle bundle = new Bundle();
             bundle.putString(alert_bundle_tag_type.LOCO_TEXT, sAddr);
