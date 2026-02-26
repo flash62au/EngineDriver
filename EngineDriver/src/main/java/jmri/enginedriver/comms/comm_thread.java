@@ -374,7 +374,7 @@ public class comm_thread extends Thread {
                 rosterName = addr;
                 rosterNamePrefix = "";
             }
-            // msgTxt will be formatted M0+L1012<;>EACL1012 or M1+S96<;>S96 
+            // msgTxt will be formatted M0+L1012<;>EACL1012 or M1+S96<;>S96
             msgTxt = String.format("M%s+%s<;>%s%s", mainapp.throttleIntToString(whichThrottle), addr, rosterNamePrefix, rosterName);  //add requested loco to this throttle
             Log.d(threaded_application.applicationName, activityName + ": sendAquireLoco(): sendAcquireLoco: addr:'" + addr + " rosterName: '" + rosterName + "' msgTxt: '" + msgTxt + "'");
             wifiSend(msgTxt);
@@ -526,7 +526,7 @@ public class comm_thread extends Thread {
         }
     }
 
-// Keep these here in case we find a need for them later    
+// Keep these here in case we find a need for them later
 //    protected void sendFunction(char cWhichThrottle, String addr, int fn, int fState) {
 //        sendFunction(mainapp.throttleCharToInt(cWhichThrottle), addr, fn, fState, false);
 //    }
@@ -646,7 +646,7 @@ public class comm_thread extends Thread {
 
     protected static void sendDccexRequestTracks() {
         if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
-        
+
         float vn = mainapp.getDccexVersionNumeric();
 
         if (vn >= 04.002007) {  /// need to remove the track manager option
@@ -658,14 +658,14 @@ public class comm_thread extends Thread {
 
     protected static void sendDccexTrackPower(char track, int powerState) {
         if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
-        
+
         String msgTxt = "<" + (powerState) + " " + track + ">";
         wifiSend(msgTxt);
     }
 
     protected static void sendDccexTrack(char track, String type, int id) {
         if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
-        
+
         String msgTxt = "";
         boolean needsId = false;
         for (int i=0; i<TRACK_TYPES.length; i++) {
@@ -709,7 +709,7 @@ public class comm_thread extends Thread {
 
     protected static void sendDccexRequestInCommandStationConsistList() {
         if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
-        
+
         wifiSend("<^>");
         if (mainapp.dccexInCommandStationConsists != null) mainapp.dccexInCommandStationConsists.clear();
     }
@@ -772,7 +772,7 @@ public class comm_thread extends Thread {
     @SuppressLint("DefaultLocale")
     protected void sendDccexAutomation(String systemName, char action, int automationLoco) {
         if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
-        
+
         //Automation: </START addr id>
         String msgTxt = String.format("</START %d %s>", automationLoco, systemName);
         wifiSend(msgTxt);
@@ -803,7 +803,7 @@ public class comm_thread extends Thread {
     @SuppressLint("DefaultLocale")
     protected void sendPower(int pState, int track) {  // DCC-EX only
         if (mainapp.isWiThrottleProtocol()) return; // DCC-EX only
-        
+
         char trackLetter = (char) ('A' + track);
         String msgTxt = String.format("<%d %s>", pState, trackLetter);
         wifiSend(msgTxt);
