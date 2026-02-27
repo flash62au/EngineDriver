@@ -473,7 +473,7 @@ public class comm_thread extends Thread {
             if (l.isConfirmed()) {
                 String addr = l.getAddress();
                 String roster_name = l.getRosterName();
-                if (roster_name != null)  // add roster selection info if present
+//                if (roster_name != null)  // add roster selection info if present
 //                    addr += "<;>" + roster_name;
 //                sendAcquireLoco(addr, whichThrottle, delays * WITHROTTLE_SPACING_INTERVAL); //ask for next loco, with 0 or more delays
 //                sendAcquireLoco(addr, whichThrottle, 0); //ask for next loco, with 0 or more delays
