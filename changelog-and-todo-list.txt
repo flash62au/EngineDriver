@@ -1100,7 +1100,7 @@
  *   TODO: support Routes on keyboards.
  *   TODO: work out how to fully support the gamepads on the Throttle and Routes pages.  Android reports a different id for the device.
  *   TODO: add the ability to support custom gamepad configs
- *   TODO: add the ability for the keyboard type to send customer commands.  e.g. everything between quites(") is send to the CS unaltered.
+ *   TODO: add the ability for the keyboard type to send custom commands.  e.g. everything between quotes(") is send to the CS unaltered.
  * In Phone Loco Sounds (throttle):
  *   TODO: move code to a separate class. This is now partly done, but the variables are still in t_a
  *   TODO: custom sound profiles to be able to specify/override the momentum delay

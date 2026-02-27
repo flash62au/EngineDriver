@@ -1556,65 +1556,12 @@ public class comm_thread extends Thread {
                         case 'i': // Command Station Information
                             // --- <iDCCEX version / microprocessorType / MotorControllerType / buildNumber>
 
-                            String old_vn = mainapp.getDccexVersionString();
-                            String [] vn1 = args[1].split("-");
-                            String [] vn2 = vn1[1].split("\\.");
-                            String vn = "4.";
-                            try {
-                                vn = String.format("%02d.", Integer.parseInt(vn2[0]));
-                            } catch (Exception e) {
-                                Log.d(threaded_application.applicationName, activityName + ": processWifiResponse(): Invalid Version " + mainapp.getDccexVersionString() + ", ignoring");
-                            }
-                            if (vn2.length>=2) {
-                                try { vn = vn +String.format("%03d",Integer.parseInt(vn2[1]));
-                                } catch (Exception ignored) {
-                                    // try to pull a partial number
-                                    String pn = "0";
-                                    for (int j=0; j<vn2[1].length(); j++ ) {
-                                        if ( (vn2[1].charAt(j)>='0') && (vn2[1].charAt(j)<='9') ) {
-                                            pn = pn + vn2[1].charAt(j);
-                                        } else { break; }
-                                    }
-                                    vn = vn +String.format("%03d", Integer.parseInt(pn));
-                                }
-                            }
-                            if (vn2.length>=3) {
-                                try { vn = vn + String.format("%03d",Integer.parseInt(vn2[2]));
-                                } catch (Exception ignored) {
-                                    // try to pull a partial number
-                                    String pn = "0";
-                                    for (int j=0; j<vn2[2].length(); j++ ) {
-                                        if ( (vn2[2].charAt(j)>='0') && (vn2[2].charAt(j)<='9') ) {
-                                            pn = pn + vn2[2].charAt(j);
-                                        } else { break; }
-                                    }
-                                    vn = vn +String.format("%03d", Integer.parseInt(pn));
-                                }
-                            }
-                            mainapp.dccexVersionString = vn;
-                            if (!mainapp.getDccexVersionString().equals(old_vn)) { //only if changed
-                                mainapp.alertActivitiesWithBundle(message_type.CONNECTED, activity_id_type.CONNECTION);
-                            } else {
-                                Log.d(threaded_application.applicationName, activityName + ": processWifiResponse(): version already set to " + mainapp.getDccexVersionString() + ", ignoring");
-                            }
-
-                            mainapp.withrottle_version = 4.0;  // fudge it
-                            String serverDesc = responseStr.substring(2, responseStr.length() - 1);
-                            mainapp.setServerType("DCC-EX");
-                            mainapp.setServerDescription(serverDesc); //store the description
-                            Pattern p = Pattern.compile(".*IoTT WiThServer.*");
-                            if (p.matcher(serverDesc).matches()) { //identify IoTT Server
-                                mainapp.setServerType("IoTT");
-                            }
-
+                            processDccexCommandStationInfoResponse(args, responseStr);
                             skipDefaultAlertToAllActivities = true;
-                            mainapp.heartbeatInterval = 20000; // force a heartbeat period
-                            heart.startHeartbeat(mainapp.heartbeatInterval);
-//                            mainapp.power_state = "2"; // unknown
                             break;
 
                         // DCC_EX protocol only
-                        case '-': // forget loco - not noramlly used
+                        case '-': // forget loco - not normally used
                             // --- <- [cab]> - Remove one or all locos from reminders
 
                             forceDropDccexLoco(args);
@@ -1793,12 +1740,22 @@ public class comm_thread extends Thread {
                             skipDefaultAlertToAllActivities = true;
                             break;
 
+                        default: {
+                            // if it was a valid DCC-EX command, and we have not picked it up above,
+                            // then only send it to the dcc-ex activity
+                            Bundle bundle = new Bundle();
+                            bundle.putString(alert_bundle_tag_type.COMMAND, responseStr);
+                            mainapp.alertActivitiesWithBundle(message_type.RESPONSE, bundle, activity_id_type.DCC_EX);
+                            skipDefaultAlertToAllActivities = true;
+
+                            Log.d(threaded_application.applicationName, activityName + ": processWifiResponse(): Unable to process valid DCC-EX command: " + responseStr);
+                        }
                     }
 
                 } else { // ignore responses that don't start with "<"
                     skipDefaultAlertToAllActivities = true;
                 }
-            } else {
+            } else { // ignore responses that are too short to be valid
                 skipDefaultAlertToAllActivities = true;
             }
         }
@@ -1846,6 +1803,64 @@ public class comm_thread extends Thread {
 
     /* ***********************************  *********************************** */
     /* ***********************************  *********************************** */
+
+    @SuppressLint("DefaultLocale")
+    private static void processDccexCommandStationInfoResponse(String [] args, String responseStr) { // <iDCCEX version / microprocessorType / MotorControllerType / buildNumber>
+        String old_vn = mainapp.getDccexVersionString();
+        String [] vn1 = args[1].split("-");
+        String [] vn2 = vn1[1].split("\\.");
+        String vn = "4.";
+        try {
+            vn = String.format("%02d.", Integer.parseInt(vn2[0]));
+        } catch (Exception e) {
+            Log.d(threaded_application.applicationName, activityName + ": processWifiResponse(): Invalid Version " + mainapp.getDccexVersionString() + ", ignoring");
+        }
+        if (vn2.length>=2) {
+            try { vn = vn +String.format("%03d",Integer.parseInt(vn2[1]));
+            } catch (Exception ignored) {
+                // try to pull a partial number
+                String pn = "0";
+                for (int j=0; j<vn2[1].length(); j++ ) {
+                    if ( (vn2[1].charAt(j)>='0') && (vn2[1].charAt(j)<='9') ) {
+                        pn = pn + vn2[1].charAt(j);
+                    } else { break; }
+                }
+                vn = vn +String.format("%03d", Integer.parseInt(pn));
+            }
+        }
+        if (vn2.length>=3) {
+            try { vn = vn + String.format("%03d",Integer.parseInt(vn2[2]));
+            } catch (Exception ignored) {
+                // try to pull a partial number
+                String pn = "0";
+                for (int j=0; j<vn2[2].length(); j++ ) {
+                    if ( (vn2[2].charAt(j)>='0') && (vn2[2].charAt(j)<='9') ) {
+                        pn = pn + vn2[2].charAt(j);
+                    } else { break; }
+                }
+                vn = vn +String.format("%03d", Integer.parseInt(pn));
+            }
+        }
+        mainapp.dccexVersionString = vn;
+        if (!mainapp.getDccexVersionString().equals(old_vn)) { //only if changed
+            mainapp.alertActivitiesWithBundle(message_type.CONNECTED, activity_id_type.CONNECTION);
+        } else {
+            Log.d(threaded_application.applicationName, activityName + ": processWifiResponse(): version already set to " + mainapp.getDccexVersionString() + ", ignoring");
+        }
+
+        mainapp.withrottle_version = 4.0;  // fudge it
+        String serverDesc = responseStr.substring(2, responseStr.length() - 1);
+        mainapp.setServerType("DCC-EX");
+        mainapp.setServerDescription(serverDesc); //store the description
+        Pattern p = Pattern.compile(".*IoTT WiThServer.*");
+        if (p.matcher(serverDesc).matches()) { //identify IoTT Server
+            mainapp.setServerType("IoTT");
+        }
+
+        mainapp.heartbeatInterval = 20000; // force a heartbeat period
+        heart.startHeartbeat(mainapp.heartbeatInterval);
+//                            mainapp.power_state = "2"; // unknown
+    }
 
     private static void processDccexInCommandStationConsistResponse( String [] args) { // <^ [loco]|[-loco] [loco]|[-loco] ...>
         if (mainapp.dccexInCommandStationConsists == null) {

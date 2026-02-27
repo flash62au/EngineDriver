@@ -41,7 +41,7 @@
                 style="?attr/ed_fn_button_style"
                 android:layout_width="fill_parent"
                 android:drawablePadding="0dp"
-                android:drawableStart="@drawable/in_device_sounds_button_icon"
+                android:drawableStart="@drawable/in_device_sounds_button_icon_states"
                 android:paddingStart="3dp"
                 android:text="@string/deviceSoundsMuteButton"
                 tools:ignore="RtlSymmetry" />
@@ -51,7 +51,7 @@
                 style="?attr/ed_fn_button_style"
                 android:layout_width="fill_parent"
                 android:drawablePadding="0dp"
-                android:drawableStart="@drawable/in_device_sounds_bell_button_icon"
+                android:drawableStart="@drawable/in_device_sounds_bell_button_icon_states"
                 android:paddingStart="3dp"
                 android:text="@string/functionButton01DefaultValue"
                 tools:ignore="RtlSymmetry" />
@@ -61,7 +61,7 @@
                 style="?attr/ed_fn_button_style"
                 android:layout_width="fill_parent"
                 android:drawablePadding="0dp"
-                android:drawableStart="@drawable/in_device_sounds_horn_button_icon"
+                android:drawableStart="@drawable/in_device_sounds_horn_button_icon_states"
                 android:paddingStart="3dp"
                 android:text="@string/functionButton02DefaultValue"
                 tools:ignore="RtlSymmetry" />
@@ -71,7 +71,7 @@
                 style="?attr/ed_fn_button_style"
                 android:layout_width="fill_parent"
                 android:drawablePadding="0dp"
-                android:drawableStart="@drawable/in_device_sounds_horn_button_icon"
+                android:drawableStart="@drawable/in_device_sounds_horn_button_icon_states"
                 android:paddingStart="3dp"
                 android:text="@string/soundsButtonHornShortDefaultValue"
                 tools:ignore="RtlSymmetry" />
