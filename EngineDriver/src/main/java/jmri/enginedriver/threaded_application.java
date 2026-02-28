@@ -1624,8 +1624,10 @@ public class threaded_application extends Application {
             bundle.putString(alert_bundle_tag_type.LOCO_TEXT, addr);
             bundle.putInt(alert_bundle_tag_type.FUNCTION, functionNumber);
             bundle.putInt(alert_bundle_tag_type.FUNCTION_ACTION, state);
+            bundle.putBoolean(alert_bundle_tag_type.FORCE, force);
             mainapp.alertCommHandlerWithBundle(message_type.FUNCTION, bundle);
 
+//            extendedLogging(activityName + ": setFunction(): :<>: fn: " + functionNumber + " state: " + state + " force:" + force);
         } // otherwise just ignore the request
     }
 

@@ -766,7 +766,7 @@ public class throttle_switching_horizontal extends throttle {
             sliderPosition = getNewSliderPositionFromSpeed(speedWiT, whichThrottle, false);
             hsbSwitchingSpeeds[whichThrottle].setProgress(sliderPosition);
         } else {
-            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): pacing delay. speed update ignored");
+            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): :<>: pacing delay. speed update ignored");
         }
         if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }

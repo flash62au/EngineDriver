@@ -2008,7 +2008,7 @@ public class throttle extends AppCompatActivity implements
                 }
             }
         } else {
-            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): pacing delay. speed update ignored");
+            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): :<>: pacing delay. speed update ignored");
         }
         if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
@@ -2639,9 +2639,11 @@ public class throttle extends AppCompatActivity implements
         }
     }
 
-    // only used for the 'Special' function label matching  AND you have custom Function Labels
+    // used for the 'Special' function label matching  AND you have custom Function Labels
     // also used for DCC-EX functions
     int setFunctionButtonState(int whichThrottle, int function, boolean downPress) {
+//        threaded_application.extendedLogging(activityName + ": setFunctionButtonState(): :<>: fn: " + function + " downPress: " + downPress);
+
         int isLatching = consist_function_latching_type.NA;
 //        Consist con = mainapp.consists[whichThrottle];
 
@@ -3555,7 +3557,7 @@ public class throttle extends AppCompatActivity implements
             }
             case gamepad_or_keyboard_event_type.FUNCTION_END: {
                 if ( (mainapp.isDccexProtocol()) && (lastGamepadFunction == val) ){
-                    doGamepadFunction(val, (lastGamepadFunctionIsPressed ? ACTION_DOWN : ACTION_UP), isConsistActiveOnThrottle, whichThrottle, repeatCnt, true);
+                    doGamepadFunction(val, (lastGamepadFunctionIsPressed ? ACTION_DOWN : ACTION_UP), isConsistActiveOnThrottle, whichThrottle, repeatCnt);
                 } else {
                     doGamepadFunction(val, ACTION_UP, isConsistActiveOnThrottle, whichThrottle, repeatCnt);
                 }
@@ -3617,7 +3619,7 @@ public class throttle extends AppCompatActivity implements
         doGamepadFunction(fKey, action, isActive, whichThrottle, repeatCnt, false);
     }
     void doGamepadFunction(int fKey, int action, boolean isActive, int whichThrottle, int repeatCnt, boolean forceIsLatching) {
-        threaded_application.extendedLogging(activityName + ": doGamepadFunction() : fKey: " + fKey + " action: " + action + " isActive: " + isActive);
+//        threaded_application.extendedLogging(activityName + ": doGamepadFunction(): :<>: fn: " + fKey + " action: " + action + " isActive: " + isActive);
         if (isActive && (repeatCnt == 0)) {
             String lab = mainapp.function_labels[whichThrottle].get(fKey);
             if (lab != null) {
@@ -3648,6 +3650,8 @@ public class throttle extends AppCompatActivity implements
 
             int isLatching = setFunctionButtonState(whichThrottle, fKey, true);  //special handling for when using the default function labels, and one of 'Special' function following options
             if (forceIsLatching) isLatching = consist_function_latching_type.YES; // override if commanded
+
+//            threaded_application.extendedLogging(activityName + ": doGamepadFunction(): :<>: fn: " + fKey + " action: " + action + " isLatching: " + isLatching);
 
             if (action == ACTION_DOWN) {
                 sendFunctionToConsistLocos(whichThrottle, fKey, lab, button_press_message_type.DOWN, leadOnly, trailOnly, followLeadFunction, isLatching, false, forceIsLatching);
@@ -5100,29 +5104,31 @@ public class throttle extends AppCompatActivity implements
                 addr = con.getLeadAddr();
 
             if (buttonPressMessageType == button_press_message_type.TOGGLE) {
-//                mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + addr, function);
+//                threaded_application.extendedLogging(activityName + ": sendFunctionToConsistLocos(): :<>: toggle");
                 mainapp.toggleFunction(whichThrottle, addr, function);
             } else {
                 if ( (!mainapp.prefOverrideWiThrottlesFunctionLatching) && (!forceIsLatching) ) {
-//                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, buttonPressMessageType);
+//                    threaded_application.extendedLogging(activityName + ": sendFunctionToConsistLocos(): :<>: not forced - buttonPressMessageType: " + buttonPressMessageType);
                     mainapp.setFunction(whichThrottle, addr, function, buttonPressMessageType, false);
 
                 } else {
                     boolean fnState = mainapp.function_states[whichThrottle][function];
+//                    threaded_application.extendedLogging(activityName + ": sendFunctionToConsistLocos(): :<>: forced   - fnState: " + fnState);
                     int oldFnState = fnState ? 1 : 0;
                     int newFnState = fnState ? 0 : 1;
 
                     if (isLatching == consist_function_latching_type.YES) {
+//                        threaded_application.extendedLogging(activityName + ": sendFunctionToConsistLocos(): :<>: latching - fnState: " + fnState + " btn: " + buttonPressMessageType);
+
                         if (buttonPressMessageType == button_press_message_type.UP) {
-//                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, oldFnState);
-//                            mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, newFnState);
                             mainapp.setFunction(whichThrottle, addr, function, oldFnState, true);
                             mainapp.setFunction(whichThrottle, addr, function, newFnState, true);
 
                             mainapp.function_states[whichThrottle][function] = (newFnState==1);
                         }
                     } else {
-//                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + addr, function, newFnState);                           }
+//                        threaded_application.extendedLogging(activityName + ": sendFunctionToConsistLocos(): :<>: momentary: fnState: " + fnState + " btn: " + buttonPressMessageType);
+
                         mainapp.setFunction(whichThrottle, addr, function, newFnState, true);
 
                         mainapp.function_states[whichThrottle][function] = (newFnState==1);
@@ -5188,32 +5194,25 @@ public class throttle extends AppCompatActivity implements
                             if ((tempPrefConsistFollowRuleStyle.equals(consist_function_rule_style_type.COMPLEX))
                                     || (isLatching == consist_function_latching_type.NA)) {
                                 if (buttonPressMessageType == button_press_message_type.TOGGLE) {
-//                                    mainapp.toggleFunction(mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i));
                                     mainapp.toggleFunction(whichThrottle, l.getAddress(), functionList.get(i));
                                 } else {
                                     if (mainapp.isWiThrottleProtocol()) {
-//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), buttonPressMessageType);
                                         mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), buttonPressMessageType, false);
 
                                     } else {
-//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), newFnState);
                                         mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), buttonPressMessageType, true);
                                     }
                                 }
                             } else {
                                 if ((isLatching == consist_function_latching_type.YES) && (buttonPressMessageType == button_press_message_type.UP)) {
                                     if (mainapp.isWiThrottleProtocol()) {
-//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), button_press_message_type.DOWN);
-//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), button_press_message_type.UP);
                                         mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), button_press_message_type.DOWN, false);
                                         mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), button_press_message_type.UP, false);
 
                                     } else {
-//                                        mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FORCE_FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), newFnState);
                                         mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), newFnState, false);
                                     }
                                 } else if (isLatching == consist_function_latching_type.NO) {
-//                                    mainapp.sendMsg(mainapp.comm_msg_handler, message_type.FUNCTION, mainapp.throttleIntToString(whichThrottle) + l.getAddress(), functionList.get(i), buttonPressMessageType);
                                     mainapp.setFunction(whichThrottle, l.getAddress(), functionList.get(i), buttonPressMessageType, false);
                                 }
                             }

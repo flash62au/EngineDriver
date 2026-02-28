@@ -622,15 +622,16 @@ public class ResponseProcessorDccex {
             if (whichThrottle >= 0) {
                 timeSinceLastCommand = Calendar.getInstance().getTimeInMillis() - mainapp.dccexLastSpeedCommandSentTime[whichThrottle];
 
-                if (timeSinceLastCommand>1000) {  // don't process an incoming speed if we sent a command for this throttle in the last second
+                Consist con = mainapp.consists[whichThrottle];
+
+                if (timeSinceLastCommand>1000) {  // don't process an incoming speed or direction changes if we sent a command for this throttle in the last second
+
 //                    threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): speed, direction or function update");
                     mainapp.dccexLastKnownSpeed[whichThrottle] = speed;
                     Bundle bundle = new Bundle();
                     bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                     bundle.putInt(alert_bundle_tag_type.SPEED, speed);
                     mainapp.alertActivitiesWithBundle(message_type.RECEIVED_THROTTLE_SET_SPEED, bundle, activity_id_type.THROTTLE);
-
-                    Consist con = mainapp.consists[whichThrottle];
 
                     // only process the direction if it is the lead loco
                     if (con.getLeadAddr().equals(addressStr)) {
@@ -640,6 +641,10 @@ public class ResponseProcessorDccex {
                         bundle.putString(alert_bundle_tag_type.LOCO, addressStr);
                         mainapp.alertActivitiesWithBundle(message_type.RECEIVED_THROTTLE_SET_DIRECTION, bundle, activity_id_type.THROTTLE);
                     }
+
+                } else {
+                    threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): :<>: extra DCC-EX pacing delay. speed update ignored");
+                }
 
                     // only process the functions if it is the lead loco
                     if (con.getLeadAddr().equals(addressStr)) {
@@ -652,6 +657,7 @@ public class ResponseProcessorDccex {
                                 fnState = mainapp.bitExtracted(Long.parseLong(args[4]), 1, i + 1);
                                 if (i==0) Log.d(threaded_application.applicationName, activityName + ": processDccexLocos(): function:" + i + " state: " + fnState);
                                 comm_thread.processFunctionState(whichThrottle, i, (fnState != 0));
+                                Bundle bundle = new Bundle();
                                 bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
                                 bundle.putString(alert_bundle_tag_type.LOCO, addressStr);
                                 bundle.putInt(alert_bundle_tag_type.FUNCTION, i);
@@ -663,9 +669,6 @@ public class ResponseProcessorDccex {
                             }
                         }
                     }
-                } else {
-                    threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): extra DCC-EX pacing delay. speed update ignored");
-                }
 
                     //noinspection AssignmentToForLoopParameter
                 throttleIndex = whichThrottle; // skip ahead
