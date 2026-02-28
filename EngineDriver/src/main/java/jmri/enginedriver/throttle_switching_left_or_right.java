@@ -830,8 +830,11 @@ public class throttle_switching_left_or_right extends throttle {
 
         int sliderPosition;
         if (!changeTimers[whichThrottle].isDelayInProgress()) {
+//            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): set speed: " + speedWiT);
             sliderPosition = getNewSliderPositionFromSpeed(speedWiT, whichThrottle, false);
             vsbSwitchingSpeeds[whichThrottle].setProgress(sliderPosition);
+        } else {
+            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): pacing delay. speed update ignored");
         }
         if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }

@@ -5,7 +5,8 @@
      * Major changes in the way that inter-activity communication works (now uses Bundles)
        Removed a number of unnecessary and/or repetitive calls to comm_handler.
        Removed a number of unnecessary broadcasts to all activities.
-       Mostly isolated the incoming DCC-EX processing from the WiThrottle processing.  Will move to separate classes later
+       Mostly isolated the incoming DCC-EX processing from the WiThrottle processing.
+       DCC-EX and WiThrottle send and receive methods moved to separate classes.
 **Version 2.42.220
  * Bug fixes
     * Bug fix for the Consist Edit and Consist Light Edit screens on early versions of Android

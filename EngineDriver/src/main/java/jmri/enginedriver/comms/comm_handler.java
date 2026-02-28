@@ -237,7 +237,7 @@ public class comm_handler extends Handler {
                   comm_thread.sendSpeedZero(whichThrottle);
                }
 
-               commThread.sendDispatchLoco(addr, whichThrottle);
+               SendProcessorWiThrottle.sendDispatchLoco(addr, whichThrottle);
             }
             break;
          }
@@ -382,13 +382,13 @@ public class comm_handler extends Handler {
                     && (bundle.containsKey(alert_bundle_tag_type.COMMAND)) ) {
 
                final String cmd = bundle.getString(alert_bundle_tag_type.COMMAND);
-               comm_thread.sendDccexCommand(cmd);
+               SendProcessorDccex.sendDccexCommand(cmd);
             }
             break;
          }
 
          case message_type.REQUEST_TRACKS: { // DCC-EX only
-            comm_thread.sendDccexRequestTracks();
+            SendProcessorDccex.sendDccexRequestTracks();
             break;
          }
 
@@ -401,28 +401,28 @@ public class comm_handler extends Handler {
                final char track = bundle.getChar(alert_bundle_tag_type.TRACK_CHAR);
                final String type = bundle.getString(alert_bundle_tag_type.TRACK_TYPE_TEXT);
                final int id = bundle.getInt(alert_bundle_tag_type.LOCO);
-               comm_thread.sendDccexTrack(track, type, id);
+               SendProcessorDccex.sendDccexTrack(track, type, id);
             }
             break;
          }
 
          case message_type.DCCEX_JOIN_TRACKS: { // DCC-EX only
-            comm_thread.sendDccexJoinTracks();
+            SendProcessorDccex.sendDccexJoinTracks();
             break;
          }
 
          case message_type.DCCEX_UNJOIN_TRACKS: { // DCC-EX only
-            comm_thread.sendDccexJoinTracks(false);
+            SendProcessorDccex.sendDccexJoinTracks(false);
             break;
          }
 
          case message_type.DCCEX_ESTOP_PAUSE: { // DCC-EX only
-            comm_thread.sendDccexEmergencyStopPauseResume();
+            SendProcessorDccex.sendDccexEmergencyStopPauseResume();
             break;
          }
 
          case message_type.DCCEX_ESTOP_RESUME: { // DCC-EX only
-            comm_thread.sendDccexEmergencyStopPauseResume(false);
+            SendProcessorDccex.sendDccexEmergencyStopPauseResume(false);
             break;
          }
 
@@ -433,7 +433,7 @@ public class comm_handler extends Handler {
 
                char trackLetter = bundle.getChar(alert_bundle_tag_type.TRACK_CHAR);
                int powerState = bundle.getInt(alert_bundle_tag_type.POWER_STATE);
-               comm_thread.sendDccexTrackPower(trackLetter, powerState);
+               SendProcessorDccex.sendDccexTrackPower(trackLetter, powerState);
             }
             break;
          }
@@ -443,7 +443,7 @@ public class comm_handler extends Handler {
                     && (bundle.containsKey(alert_bundle_tag_type.CV)) ) {
 
                final int cv = bundle.getInt(alert_bundle_tag_type.CV);
-               comm_thread.sendDccexReadCv(cv);
+               SendProcessorDccex.sendDccexReadCv(cv);
             }
             break;
          }
@@ -455,7 +455,7 @@ public class comm_handler extends Handler {
 
                final int cv = bundle.getInt(alert_bundle_tag_type.CV);
                final int cvValue = bundle.getInt(alert_bundle_tag_type.CV_VALUE);
-               comm_thread.sendDccexWriteCv(cv, cvValue);
+               SendProcessorDccex.sendDccexWriteCv(cv, cvValue);
             }
                break;
          }
@@ -469,7 +469,7 @@ public class comm_handler extends Handler {
                final int cv = bundle.getInt(alert_bundle_tag_type.CV);
                final int cvValue = bundle.getInt(alert_bundle_tag_type.CV_VALUE);
                final int addr = bundle.getInt(alert_bundle_tag_type.LOCO);
-               comm_thread.sendDccexWritePomCv(cv, cvValue, addr);
+               SendProcessorDccex.sendDccexWritePomCv(cv, cvValue, addr);
             }
             break;
          }
@@ -479,7 +479,7 @@ public class comm_handler extends Handler {
                     && (bundle.containsKey(alert_bundle_tag_type.COMMAND)) ) {
                final String cmd = bundle.getString(alert_bundle_tag_type.COMMAND);
                String[] args = cmd.split(" ");
-               comm_thread.sendWriteDirectDccCommand(args);
+               SendProcessorWiThrottle.sendWriteDirectDccCommand(args);
             }
             break;
          }
@@ -495,7 +495,7 @@ public class comm_handler extends Handler {
                final String consistName = bundle.getString(alert_bundle_tag_type.CONSIST_NAME);
                final String addr = bundle.getString(alert_bundle_tag_type.LOCO_TEXT);
                final int facing = bundle.getInt(alert_bundle_tag_type.FACING);
-               comm_thread.sendAdvancedConsistAddLoco(consist, consistName, addr, facing);
+               SendProcessorWiThrottle.sendAdvancedConsistAddLoco(consist, consistName, addr, facing);
             }
             break;
          }
@@ -507,13 +507,13 @@ public class comm_handler extends Handler {
 
                final String consist = bundle.getString(alert_bundle_tag_type.CONSIST_TEXT);
                final String addr = bundle.getString(alert_bundle_tag_type.LOCO_TEXT);
-               comm_thread.sendAdvancedConsistRemoveLoco(consist, addr);
+               SendProcessorWiThrottle.sendAdvancedConsistRemoveLoco(consist, addr);
             }
             break;
          }
 
          case message_type.DCCEX_REQUEST_CONSIST_LIST: { // DCC-EX only
-            comm_thread.sendDccexRequestInCommandStationConsistList();
+            SendProcessorDccex.sendDccexRequestInCommandStationConsistList();
             break;
          }
 
@@ -526,8 +526,8 @@ public class comm_handler extends Handler {
                final String consist = bundle.getString(alert_bundle_tag_type.CONSIST_TEXT);
                final String addr = bundle.getString(alert_bundle_tag_type.LOCO_TEXT);
                final int facing = bundle.getInt(alert_bundle_tag_type.FACING);
-               comm_thread.sendDccexCommandStationConsistAddLoco(consist, addr, facing);
-               comm_thread.sendDccexRequestInCommandStationConsistList();
+               SendProcessorDccex.sendDccexCommandStationConsistAddLoco(consist, addr, facing);
+               SendProcessorDccex.sendDccexRequestInCommandStationConsistList();
             }
             break;
          }
@@ -539,19 +539,19 @@ public class comm_handler extends Handler {
 
                final String consist = bundle.getString(alert_bundle_tag_type.CONSIST_TEXT);
                final String addr = bundle.getString(alert_bundle_tag_type.LOCO_TEXT);
-               comm_thread.sendDccexCommandStationConsistRemoveLoco(consist, addr);
-               comm_thread.sendDccexRequestInCommandStationConsistList();
+               SendProcessorDccex.sendDccexCommandStationConsistRemoveLoco(consist, addr);
+               SendProcessorDccex.sendDccexRequestInCommandStationConsistList();
             }
                break;
          }
 
          case message_type.READ_DCCEX_LOCO_ADDRESS: { // DCC-EX only
-            comm_thread.sendDccexGetLocoAddress();
+            SendProcessorDccex.sendDccexGetLocoAddress();
             break;
          }
 
          case message_type.READ_DCCEX_CONSIST_ADDRESS: { // DCC-EX only
-            comm_thread.sendDccexGetConsistAddress();
+            SendProcessorDccex.sendDccexGetConsistAddress();
             break;
          }
 
@@ -560,7 +560,7 @@ public class comm_handler extends Handler {
                     && (bundle.containsKey(alert_bundle_tag_type.LOCO)) ) {
 
                final int addr = bundle.getInt(alert_bundle_tag_type.LOCO);
-               comm_thread.sendDccexWriteDecoderAddress(addr);
+               SendProcessorDccex.sendDccexWriteDecoderAddress(addr);
             }
             break;
          }
@@ -573,7 +573,7 @@ public class comm_handler extends Handler {
 
                final String addr = bundle.getString(alert_bundle_tag_type.LOCO_TEXT);
                final int whichThrottle = bundle.getInt(alert_bundle_tag_type.THROTTLE);
-               commThread.sendStealLoco(addr, whichThrottle);
+               SendProcessorWiThrottle.sendStealLoco(addr, whichThrottle);
             }
             break;
          }
@@ -672,7 +672,7 @@ public class comm_handler extends Handler {
                final char routeAction = bundle.getChar(alert_bundle_tag_type.ROUTE_ACTION);
                final int addr = bundle.getInt(alert_bundle_tag_type.LOCO);
 
-               commThread.sendDccexAutomation(route, routeAction, addr);
+               SendProcessorDccex.sendDccexAutomation(route, routeAction, addr);
             }
             break;
          }

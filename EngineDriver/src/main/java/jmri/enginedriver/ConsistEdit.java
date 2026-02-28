@@ -167,7 +167,7 @@ public class ConsistEdit extends AppCompatActivity implements OnGestureListener 
 
         @Override
         public void handleMessage(Message msg) {
-            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
             Bundle bundle = msg.getData();
 
             switch (msg.what) {

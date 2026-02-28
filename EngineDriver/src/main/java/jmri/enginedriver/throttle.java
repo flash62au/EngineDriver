@@ -866,7 +866,7 @@ public class throttle extends AppCompatActivity implements
 
         @Override
         public void handleMessage(Message msg) {
-            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
             Bundle bundle = msg.getData();
 
             switch (msg.what) {
@@ -892,6 +892,7 @@ public class throttle extends AppCompatActivity implements
                                 break;
                         }
                     }
+                    break;
                 }
 
                 case message_type.RECEIVED_POWER_STATE_CHANGE:
@@ -1015,6 +1016,7 @@ public class throttle extends AppCompatActivity implements
                             }
                         }
                     }
+                    break;
                 }
 
                 case message_type.RECEIVED_THROTTLE_SET_SPEED_STEP: {
@@ -1026,6 +1028,7 @@ public class throttle extends AppCompatActivity implements
                         int speedStepCode = bundle.getInt(alert_bundle_tag_type.SPEED_STEPS);
                         setSpeedStepsFromWiT(whichThrottle, speedStepCode);
                     }
+                    break;
                 }
 
                 case message_type.RECEIVED_THROTTLE_LOCO_ADDED: {
@@ -1985,6 +1988,7 @@ public class throttle extends AppCompatActivity implements
     void speedUpdateWiT(int whichThrottle, int speedWiT) {
         if (speedWiT < 0) speedWiT = 0;
         if (!changeTimers[whichThrottle].delayInProg) {
+//            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): set speed: " + speedWiT);
             sbs[whichThrottle].setProgress(speedWiT);
             // Now update ESU MCII Knob position
             if (IS_ESU_MCII) {
@@ -2003,6 +2007,8 @@ public class throttle extends AppCompatActivity implements
                     }
                 }
             }
+        } else {
+            threaded_application.extendedLogging(activityName + ": speedUpdateWiT(): pacing delay. speed update ignored");
         }
         if(ipls!=null) ipls.doLocoSound(whichThrottle, getSpeedFromCurrentSliderPosition(whichThrottle, false), dirs[whichThrottle], mainapp.soundsIsMuted[whichThrottle]);
     }
@@ -6563,7 +6569,7 @@ public class throttle extends AppCompatActivity implements
     // set label and dcc functions (based on settings) or hide if no label
     @SuppressLint("ClickableViewAccessibility")
     void set_function_labels_and_listeners_for_view(int whichThrottle) {
-        Log.d(threaded_application.applicationName, activityName + ": set_function_labels_and_listeners_for_view() called");
+//        threaded_application.extendedLogging( activityName + ": set_function_labels_and_listeners_for_view() called");
 
 //        // implemented in derived class, but called from this class
 
@@ -6681,7 +6687,7 @@ public class throttle extends AppCompatActivity implements
     // screen elements
 
     protected void setLabels() {
-        Log.d(threaded_application.applicationName, activityName + ": setLabels()");
+//        threaded_application.extendedLogging(activityName + ": setLabels()");
 
         if (mainapp.appIsFinishing) {
             return;

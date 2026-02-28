@@ -247,10 +247,10 @@ public class threaded_application extends Application {
     private boolean protocolCurrentlyInUseIsDccex = false;  // is a DCC-EX EX-CommandStation  use the methods to set or interrogate this
     public String prefUseDccexProtocol = "Auto";
     public boolean prefAlwaysUseFunctionsFromServer = false;
-    public String dccexVersionString = "";
+    public static String dccexVersionString = "";
     public int DCCEXlistsRequested = -1;  // -1=not requested  0=requested  1,2,3= no. of lists received
 
-    public boolean dccexScreenIsOpen = false;
+    public static boolean dccexScreenIsOpen = false;
     public boolean witScreenIsOpen = false;
 
     public int dccexActionTypeIndex = 0;
@@ -1841,7 +1841,7 @@ public class threaded_application extends Application {
         alertActivitiesWithBundle(msgType, 0L, bundle, activityIndex);
     }
     public void alertActivitiesWithBundle(int msgType, long delayMs, Bundle bundle, int activityIndex) {
-        Log.d(threaded_application.applicationName, activityName + ": alertActivitiesWithBundle(): " + msgType);
+//        threaded_application.extendedLogging(activityName + ": alertActivitiesWithBundle(): " + msgType);
         if (activityIndex < 0) { // send to all
             for (int i = activity_id_type.MIN; i <= activity_id_type.MAX; i++) {  // exclude 0 by default as that is the comm_thread
                 if (activityBundleMessageHandlers[i] != null) {
@@ -1884,7 +1884,7 @@ public class threaded_application extends Application {
     }
 
     public void sendMessageWithBundleDelay(Handler h, long delayMs, int msgType, Bundle bundle) {
-        Log.d(threaded_application.applicationName, activityName + ": sendMessageWithBundleDelay(): " + msgType);
+//        threaded_application.extendedLogging(activityName + ": sendMessageWithBundleDelay(): " + msgType);
 
         boolean sent = false;
         if (h != null) {
@@ -2999,7 +2999,7 @@ public class threaded_application extends Application {
         return withrottle_version;
     }
 
-    public String getDccexVersionString() {
+    public static String getDccexVersionString() {
         return dccexVersionString;
     }
     public float getDccexVersionNumeric() {

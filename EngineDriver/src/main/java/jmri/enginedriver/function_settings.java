@@ -327,7 +327,7 @@ public class function_settings extends AppCompatActivity implements PermissionsH
 
         @Override
         public void handleMessage(Message msg) {
-            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
 //            Bundle bundle = msg.getData();
 
             switch (msg.what) {

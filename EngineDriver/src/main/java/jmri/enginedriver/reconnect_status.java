@@ -72,7 +72,7 @@ public class reconnect_status extends AppCompatActivity {
 
         @Override
         public void handleMessage(Message msg) {
-            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
             Bundle bundle = msg.getData();
 
             switch (msg.what) {

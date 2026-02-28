@@ -541,7 +541,7 @@ public class DeviceSoundsSettings extends AppCompatActivity implements OnGesture
 
         @Override
         public void handleMessage(Message msg) {
-            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
 //            Bundle bundle = msg.getData();
 
             switch (msg.what) {

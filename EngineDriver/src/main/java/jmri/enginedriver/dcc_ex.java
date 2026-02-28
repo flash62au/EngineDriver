@@ -202,7 +202,7 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
 
         @Override
         public void handleMessage(Message msg) {
-            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
 
             Bundle bundle = msg.getData();
             String response_str;
@@ -1168,7 +1168,7 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
 
         refreshOverflowMenu();
 
-        mainapp.dccexScreenIsOpen = true;
+        threaded_application.dccexScreenIsOpen = true;
 
         refreshDccexView();
     }
@@ -1181,7 +1181,7 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
         super.onDestroy();
 
         mainapp.hideSoftKeyboard(this.getCurrentFocus());
-        mainapp.dccexScreenIsOpen = false;
+        threaded_application.dccexScreenIsOpen = false;
 
         mainapp.clearActivityBundleMessageHandler(activity_id_type.DCC_EX);
     }
@@ -1207,7 +1207,7 @@ public class dcc_ex extends AppCompatActivity implements cvBitCalculator.OnConfi
         void endThisActivity() {
         Log.d(threaded_application.applicationName, activityName + ": endThisActivity()");
         threaded_application.activityInTransition(activityName);
-        mainapp.dccexScreenIsOpen = false;
+        threaded_application.dccexScreenIsOpen = false;
         this.finish();  //end this activity
         connection_activity.overridePendingTransition(this, R.anim.fade_in, R.anim.fade_out);
     }

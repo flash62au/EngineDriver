@@ -473,7 +473,7 @@ public class select_loco extends AppCompatActivity {
     // lookup and set values of various informational text labels and size the
     // screen elements
     protected void setLabels() {
-        Log.d(threaded_application.applicationName, activityName + ": setLabels()");
+//        threaded_application.extendedLogging(activityName + ": setLabels()");
 
         refreshRosterList();
 //        showMethod(prefSelectLocoMethod);
@@ -613,7 +613,7 @@ public class select_loco extends AppCompatActivity {
 
         @Override
         public void handleMessage(Message msg) {
-            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
+//            threaded_application.extendedLogging(activityName + ": BundleMessageHandler.handleMessage() what: " + msg.what );
             Bundle bundle = msg.getData();
 
             switch (msg.what) {
