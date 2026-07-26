@@ -5,6 +5,9 @@
 * Other
       * Disable the DCC-EX 'Set' button if no valid DC address entered. (for DC/DCX tracks)
       * Hint for the DC Address
+      * Upgrade gradle to 9.3.1
+      * Disable the background warning when using setting the system permission.
+      * Disable the background warning when using the image picker to choose a background image.
 **Version 2.44.234
 * New Features
       * mDNS is now far more agressive in trying to find servers.
@@ -1167,12 +1170,12 @@
  *   TODO: Improve the way it deals with multiple DCC-EX commands on single line. Really needs to be read char by char.
  *   TODO: Continue converting the three old style themes/styles to the reusable format.
  *   TODO: Move most, if not all, toasts to the custom toast. Especially the longer ones.  This is largely done now.
- *   TODO: BUG. The application action does not work correctly in the secondary screens.
+ *   TODO: BUG. The app icon action does not work, as probably expected, in the secondary screens.
  * intro
- *   TODO: if saved preferences found, prompt for import and shortcircuit intro. This is unlikely as the folder is not created till the app runs the first time, so you can't pre load the saved preferences in the folder.
+ *   TODO: If saved preferences found, prompt for import and shortcircuit intro. Unless this is a reload, this is unlikely as the folder is not created till the app runs the first time, so you can't pre load the saved preferences in the folder.
  * web
  *   TODO: allow user to specify initial zoom-level of each web view
- *   TODO: allow zoom out more than the page width
+ *   TODO: allow zoom out more than the page width. ??? Not sure what this means.
  * routes
  *   TODO: shrink button text if longer than x
  *   TODO: determine why double-click needed sometimes
@@ -1187,7 +1190,7 @@
  *   TODO: Add DCC-EX to "Auto-connect to first server?"
  *   TODO: Why does the first connection attempt fail sometimes?
  * disconnect/reconnect
- *   TODO: set limit on reconnect attempts?
+ *   TODO: set limit on reconnect attempts?  A Couunter has now been implemented. Need to do someting with it.
  *   TODO: On reconnect, consider dropping all locos from the throttles and reacquiring them (like reloading saved locos)
  * at connection or close connection / exit app
  *   TODO: add option to save and automatically load locos on connection to be server specific
@@ -1246,7 +1249,7 @@
  * preferences:
  *   TODO: work out why reusable_toolbar_button_cv19_consist_states and reusable_toolbar_button_dccex_consist_states cause crashes in older version of Android. And remove the workaround currently in place
  * children's timer:
- *   TODO: Alternate version.  Allow the selection of locos, but only from the filtered roster.  Unlimited time. Routes and Points would be available.
+ *   TODO: Alternate version.  Allow the selection of locos, but only from a filtered roster.  Unlimited time. Routes and Points would be available.
  * log_viewer:
  *
  *

@@ -276,6 +276,7 @@ public class PreferencesActivity extends AppCompatActivity implements Preference
 
         //noinspection AssignmentToStaticFieldFromInstanceMethod
         threaded_application.currentActivity = activity_id_type.SETTINGS;
+        threaded_application.inBackgroundForImageOrPermission= false;
 
 //        try {
 //            dismissDialog(PROGRESS_BAR_TYPE);
@@ -847,12 +848,14 @@ public class PreferencesActivity extends AppCompatActivity implements Preference
 
     protected void loadImageFromGallery() {
         try {
+            threaded_application.inBackgroundForImageOrPermission = true;
             // Create intent to Open Image applications like Gallery, Google Photos
             Intent intent = new Intent(Intent.ACTION_PICK,
                     android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
             galleryLauncher.launch(intent);
             ConnectionActivity.overridePendingTransition(this, R.anim.fade_in, R.anim.fade_out);
         } catch (Exception ex) {
+            threaded_application.inBackgroundForImageOrPermission= false;
             threaded_application.logging(activityName + ": loadImageFromGallery() failed. " + ((ex.getMessage() != null) ? ex.getMessage() : "") );
         }
     }
@@ -1704,6 +1707,7 @@ public class PreferencesActivity extends AppCompatActivity implements Preference
 
             //noinspection AssignmentToStaticFieldFromInstanceMethod
             threaded_application.currentActivity = activity_id_type.SETTINGS;
+            threaded_application.inBackgroundForImageOrPermission= false;
 
             getPreferenceScreen().getSharedPreferences()
                     .registerOnSharedPreferenceChangeListener(this);
@@ -2401,6 +2405,7 @@ public class PreferencesActivity extends AppCompatActivity implements Preference
 
             //noinspection AssignmentToStaticFieldFromInstanceMethod
             threaded_application.currentActivity = activity_id_type.SETTINGS;
+            threaded_application.inBackgroundForImageOrPermission= false;
 
             getPreferenceScreen().getSharedPreferences()
                     .registerOnSharedPreferenceChangeListener(this);
