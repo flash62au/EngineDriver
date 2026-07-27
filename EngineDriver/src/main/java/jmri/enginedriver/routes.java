@@ -39,6 +39,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -290,6 +291,33 @@ public class routes extends AppCompatActivity
             if (!routeEntry.getText().toString().equals(getString(R.string.disabled)))
                 routeEntry.setText(getString(R.string.disabled));
         }
+
+        // if there is a long first word or the total length is long, reduce the font size
+        String bt = routeEntry.getText().toString();
+        String [] words = bt.split(" ");
+        int longestWord = 0;
+        for (int l=0; l<words.length; l++) {
+            if (words[l].length()>longestWord) longestWord = words[l].length();
+        }
+        int textSize = 18;
+        int maxLines = 2;
+        if ( (longestWord > 14) || (bt.length() > 22) ) {
+            textSize = 10;
+            maxLines = 3;
+        } else if ( (longestWord > 12) || (bt.length() > 19) ) {
+            textSize = 12;
+            maxLines = 3;
+        } else if ( (longestWord > 10) || (bt.length() > 16) ) {
+            textSize = 14;
+            maxLines = 3;
+        } else if ( (longestWord > 8) || (bt.length() > 13) ) {
+            textSize = 16;
+        }
+        //noinspection UnnecessaryUnicodeEscape
+        bt = bt.replace("-","-\u0020"); // replace hyphen with hyphen+small-space
+        routeButton.setText(bt);
+        routeButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize);
+        routeButton.setMaxLines(maxLines);
 
         refreshOverflowMenu();
 

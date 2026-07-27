@@ -1,10 +1,12 @@
 **Version 2.44.236
 * New Features
+      * Shrink Route long button labels.  (Doesn't work on early versions of Android.)
+      * Added 'Help' button and menu item on the Connection Screen.
 * Bug Fixes
-      * Enabling of the PROG type buttons would not work unless PROG was the last track
+      * Enabling of the PROG type buttons would not work unless PROG was the last track.
 * Other
       * Disable the DCC-EX 'Set' button if no valid DC address entered. (for DC/DCX tracks)
-      * Hint for the DC Address
+      * Added Hint for the DC Address on the DCC-EX Track Manager page.
       * Upgrade gradle to 9.3.1
       * Disable the background warning when using setting the system permission.
       * Disable the background warning when using the image picker to choose a background image.
@@ -1177,7 +1179,7 @@
  *   TODO: allow user to specify initial zoom-level of each web view
  *   TODO: allow zoom out more than the page width. ??? Not sure what this means.
  * routes
- *   TODO: shrink button text if longer than x
+ *   TODO: shrink button text if longer than x. - Fixed for later versions of Android.  Need to work out why it doesn't work for early versions.
  *   TODO: determine why double-click needed sometimes
  * turnouts
  *   TODO: add state-based color (maybe just for colorful theme?)
@@ -1190,7 +1192,7 @@
  *   TODO: Add DCC-EX to "Auto-connect to first server?"
  *   TODO: Why does the first connection attempt fail sometimes?
  * disconnect/reconnect
- *   TODO: set limit on reconnect attempts?  A Couunter has now been implemented. Need to do someting with it.
+ *   TODO: set limit on reconnect attempts?  A Counter has now been implemented. Need to do someting with it.
  *   TODO: On reconnect, consider dropping all locos from the throttles and reacquiring them (like reloading saved locos)
  * at connection or close connection / exit app
  *   TODO: add option to save and automatically load locos on connection to be server specific

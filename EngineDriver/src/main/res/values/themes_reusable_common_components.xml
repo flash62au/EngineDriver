@@ -46,6 +46,7 @@
 
         <!-- toolbar  buttons -->
         <item name="ed_throttle_switch_button">@drawable/reusable_toolbar_button_throttle_switch_button</item>
+        <item name="ed_help_button">@drawable/reusable_toolbar_button_help</item>
         <item name="ed_preferences_button">@drawable/reusable_toolbar_button_preferences</item>
         <item name="ed_wizard_button">@drawable/reusable_toolbar_button_wizard</item>
         <item name="ed_throttle_button">@drawable/reusable_toolbar_button_throttle</item>
@@ -163,6 +164,7 @@
         <item name="ed_share_glyph">@drawable/glyph_button_share</item>
         <item name="ed_read_glyph">@drawable/glyph_button_read_states</item>
         <item name="ed_preferences_glyph">@drawable/glyph_menu_preferences</item>
+        <item name="ed_help_glyph">@drawable/glyph_menu_help</item>
         <item name="ed_menu_glyph">@drawable/glyph_menu_overflow_menu_dark_background</item>
         <item name="ed_wizard_glyph">@drawable/glyph_menu_wizard</item>
         <item name="ed_blank_glyph">@drawable/glyph_blank</item>

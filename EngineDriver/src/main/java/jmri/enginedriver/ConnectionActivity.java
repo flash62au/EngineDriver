@@ -37,6 +37,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -814,8 +815,8 @@ public class ConnectionActivity extends AppCompatActivity implements Permissions
         threaded_application.logging(activityName + ": onResume()");
         super.onResume();
         threaded_application.activityResumed(activityName);
+        threaded_application.inBackgroundForImageOrPermission = false;
         mainapp.removeNotification(this.getIntent());
-//        threaded_application.clearCustomToastPairList();
 
         mainapp.applyTheme(this);
 
@@ -1145,6 +1146,7 @@ public class ConnectionActivity extends AppCompatActivity implements Permissions
         mainapp.setFlashlightActionViewButton(overflowMenu, overflowMenu.findItem(R.id.flashlight_button));
         overflowMenu.findItem(R.id.intro_button).setVisible(!mainapp.prefHideInstructionalToasts);
         overflowMenu.findItem(R.id.settings_button).setVisible(!mainapp.prefHideInstructionalToasts);
+        overflowMenu.findItem(R.id.help_button).setVisible(!mainapp.prefHideInstructionalToasts);
 
         adjustToolbarSize(overflowMenu);
     }
@@ -1161,6 +1163,12 @@ public class ConnectionActivity extends AppCompatActivity implements Permissions
             return true;
         } else if ( (item.getItemId() == R.id.settings_mnu) || (item.getItemId() == R.id.settings_button) ) {
             startPreferencesActivity();
+            return true;
+        } else if ( (item.getItemId() == R.id.help_mnu) || (item.getItemId() == R.id.help_button) ) {
+            threaded_application.inBackgroundForImageOrPermission = true;
+            String url = "https://enginedriver.mstevetodd.com/operation/index.html";
+            in = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(in);
             return true;
         } else if (item.getItemId() == R.id.about_mnu) {
             in = new Intent().setClass(this, AboutActivity.class);

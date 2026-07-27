@@ -50,6 +50,7 @@
 
     <attr name="ed_throttle_switch_button" format="reference" />
     <attr name="ed_wizard_button" format="reference" />
+    <attr name="ed_help_button" format="reference" />
     <attr name="ed_preferences_button" format="reference" />
     <attr name="ed_throttle_button" format="reference" />
     <attr name="ed_web_button" format="reference" />
@@ -215,6 +216,7 @@
     <attr name="ed_previous_glyph" format="reference" />
     <attr name="ed_read_glyph" format="reference" />
     <attr name="ed_preferences_glyph" format="reference" />
+    <attr name="ed_help_glyph" format="reference" />
     <attr name="ed_menu_glyph" format="reference" />
     <attr name="ed_wizard_glyph" format="reference" />
     <attr name="ed_blank_glyph" format="reference" />
