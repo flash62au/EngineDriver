@@ -465,6 +465,7 @@
 
     <string name="deviceSoundsVolumeNotice">手机本地音效功能使用的是“铃声”系统音量设置，而不是“媒体”音量设置。</string>
     <string name="deviceSoundsVolumeWarning">目前只有 %d%% 版本，所以您可能听不到声音。</string>
+    <string name="helpMenu">帮助（网页版）</string>
     <string name="logViewer">查看日志</string>
     <string name="clearLocoList">清除列表</string>
     <string name="ClearConnList">清除最近列表</string>

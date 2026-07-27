@@ -338,6 +338,7 @@
 
     <string name="deviceSoundsVolumeNotice">La función In Phone Loco Sounds utiliza la configuración de volumen del sistema \'Timbre\', no el volumen \'Medios\'.</string>
     <string name="deviceSoundsVolumeWarning">Actualmente solo está disponible en %d%%, por lo que puede tener dificultades para escuchar los sonidos.</string>
+    <string name="helpMenu">Ayuda (Web)</string>
     <string name="logViewer">Ver Log</string>
     <string name="clearLocoList">Limpia la lista</string>
     <string name="ClearConnList">Limpiar lista de recientes</string>

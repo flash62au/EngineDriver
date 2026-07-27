@@ -346,6 +346,7 @@
 
     <string name="deviceSoundsVolumeNotice">Le son via le telephone utilise le reglage sonnerie et pas Media</string>
     <string name="deviceSoundsVolumeWarning">Le son est réglé à seulement %d%% il peu etre difficile à entendre</string>
+    <string name="helpMenu">Aide (Web)</string>
     <string name="logViewer">Affichage log</string>
     <string name="clearLocoList">Efface list</string>
     <string name="ClearConnList">Efface liste récente</string>

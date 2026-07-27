@@ -182,6 +182,7 @@
         <!-- toolbar buttons -->
 
         <item name="ed_throttle_switch_button">@drawable/reusable_toolbar_button_throttle_switch_button</item>
+        <item name="ed_help_button">@drawable/reusable_toolbar_button_help</item>
         <item name="ed_preferences_button">@drawable/reusable_toolbar_button_preferences</item>
         <item name="ed_wizard_button">@drawable/reusable_toolbar_button_wizard</item>
         <item name="ed_throttle_button">@drawable/reusable_toolbar_button_throttle</item>

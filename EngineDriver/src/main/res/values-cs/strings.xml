@@ -432,6 +432,7 @@
 
     <string name="deviceSoundsVolumeNotice">Funkce Zvuky Loco v telefonu používá nastavení hlasitosti systému \'Vyzvánění\', nikoli hlasitost \'Média\'.</string>
     <string name="deviceSoundsVolumeWarning">Tato hlasitost je momentálně nastavena pouze na %d%%, takže můžete mít potíže se slyšením zvuků.</string>
+    <string name="helpMenu">Nápověda (web)</string>
     <string name="logViewer">Zobrazit protokol</string>
     <string name="clearLocoList">Vymazat seznam</string>
     <string name="ClearConnList">Vymazat poslední seznam</string>

@@ -340,6 +340,7 @@
 
     <string name="deviceSoundsVolumeNotice">La funció Sons de locomoció al telèfon utilitza la configuració de volum del sistema \"Timbre\" no el volum \"Multimèdia\".</string>
     <string name="deviceSoundsVolumeWarning">Actualment només està al %d%%, de manera que és possible que tingueu dificultats per sentir els sons.</string>
+    <string name="helpMenu">Ajuda (Web)</string>
     <string name="logViewer">Veure Log</string>
     <string name="clearLocoList">Neteja la llista</string>
     <string name="ClearConnList">Neteja la llista de recents</string>

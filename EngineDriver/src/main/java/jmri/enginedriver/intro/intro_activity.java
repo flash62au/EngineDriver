@@ -61,6 +61,7 @@ public class intro_activity extends AppIntro2 implements PermissionsHelper.Permi
         mainapp = (threaded_application) this.getApplication();
 
         mainapp.introIsRunning = true;
+        threaded_application.inBackgroundForImageOrPermission = true;
 
         prefs = getSharedPreferences("jmri.enginedriver_preferences", 0);
         originalPrefTheme = prefs.getString("prefTheme", getApplicationContext().getResources().getString(R.string.prefThemeDefaultValue));
@@ -332,6 +333,8 @@ public class intro_activity extends AppIntro2 implements PermissionsHelper.Permi
         threaded_application.logging(activityName + ": onDestroy()");
 
         mainapp.introIsRunning = false;
+        threaded_application.inBackgroundForImageOrPermission = false;
+
         if (!introComplete) {
             mainapp.safeToast(R.string.introbackButtonPress, Toast.LENGTH_LONG);
         }

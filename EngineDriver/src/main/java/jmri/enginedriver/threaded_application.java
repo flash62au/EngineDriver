@@ -199,6 +199,10 @@ public class threaded_application extends Application {
     public static int reconnectAttemptCount = 0;
 
     public static int wasInBackgroundWarningShownCount = 0;
+    public static boolean inBackgroundForImageOrPermission = false;
+
+    private static final String NOTIFICATION_CHANNEL_ID_HIGH = "ed_channel_HIGH";
+    private static final String NOTIFICATION_CHANNEL_ID_QUIET = "ed_channel_HIGH_quiet";
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - //
     // Turnouts
@@ -707,26 +711,28 @@ public class threaded_application extends Application {
         if (notificationManager == null) {
             if (notificationIntent == null) return;
             // create it
+            notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
             if (Build.VERSION.SDK_INT >= 26) {
-                String CHANNEL_ID = "ed_channel_HIGH";// The id of the channel.
-                String CHANNEL_ID_QUIET = "ed_channel_HIGH_quiet";// The id of the channel without sound.
-                String channelId;
                 CharSequence name = this.getString(R.string.notificationInBackgroundTitle);// The user-visible name of the channel.
 
+                // Create High importance channel
+                NotificationChannel highChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID_HIGH, name, NotificationManager.IMPORTANCE_HIGH);
+                notificationManager.createNotificationChannel(highChannel);
+
+                // Create Low importance (quiet) channel
+                NotificationChannel quietChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID_QUIET, name, NotificationManager.IMPORTANCE_LOW);
+                quietChannel.setSound(null, null);
+                quietChannel.enableVibration(false);
+                notificationManager.createNotificationChannel(quietChannel);
+
                 boolean prefFeedbackWhenGoingToBackground = prefs.getBoolean("prefFeedbackWhenGoingToBackground", getResources().getBoolean(R.bool.prefFeedbackWhenGoingToBackgroundDefaultValue));
-                if (prefFeedbackWhenGoingToBackground) {
-                    channelId = CHANNEL_ID;
-                    notificationChannel = new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_HIGH);
-                } else {
-                    channelId = CHANNEL_ID_QUIET;
-                    notificationChannel = new NotificationChannel(CHANNEL_ID_QUIET, name, NotificationManager.IMPORTANCE_DEFAULT);
-                    notificationChannel.setSound(null, null);
-                }
+                String channelId = prefFeedbackWhenGoingToBackground ? NOTIFICATION_CHANNEL_ID_HIGH : NOTIFICATION_CHANNEL_ID_QUIET;
 
                 PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
                         PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-                notificationBuilder = new Notification.Builder(getApplicationContext(), notificationChannel.getId());
+                notificationBuilder = new Notification.Builder(getApplicationContext(), channelId);
 
                 notificationBuilder = notificationBuilder
                         .setSmallIcon(R.drawable.icon_notification)
@@ -734,12 +740,7 @@ public class threaded_application extends Application {
                         .setContentText("")
                         .setContentIntent(contentIntent)
                         .setOngoing(true)
-                        .setOnlyAlertOnce(false)
-                        .setChannelId(channelId);
-
-                // Add as notification
-                notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                notificationManager.createNotificationChannel(notificationChannel);
+                        .setOnlyAlertOnce(false);
 
             } else {
                 //noinspection deprecation
@@ -755,12 +756,8 @@ public class threaded_application extends Application {
                 PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
                         PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 notificationCompatBuilder.setContentIntent(contentIntent);
-
-                // Add as notification
-                notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             }
         }
-
     }
 
     private void addNotification(Intent notificationIntent, int level) {
@@ -774,11 +771,17 @@ public class threaded_application extends Application {
             notificationText = getResources().getString(R.string.notificationInBackgroundTextKilled);
         }
 
-        vibrate(new long[]{1000, 500, 1000, 500});
+        if (!threaded_application.inBackgroundForImageOrPermission)
+            vibrate(new long[]{1000, 500, 1000, 500});
         createNotificationChannelAndManager(notificationIntent);
 
         if (Build.VERSION.SDK_INT >= 26) {
             notificationBuilder.setContentText(notificationText);
+
+            boolean prefFeedbackWhenGoingToBackground = prefs.getBoolean("prefFeedbackWhenGoingToBackground", getResources().getBoolean(R.bool.prefFeedbackWhenGoingToBackgroundDefaultValue));
+            String channelId = (prefFeedbackWhenGoingToBackground && !inBackgroundForImageOrPermission) ? NOTIFICATION_CHANNEL_ID_HIGH : NOTIFICATION_CHANNEL_ID_QUIET;
+            notificationBuilder.setChannelId(channelId);
+
             PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
                     PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             notificationBuilder.setContentIntent(contentIntent);
@@ -786,6 +789,7 @@ public class threaded_application extends Application {
 
         } else {
             notificationCompatBuilder.setContentText(notificationText);
+            notificationCompatBuilder.setSilent(inBackgroundForImageOrPermission);
 
             PendingIntent contentIntent = PendingIntent.getActivity(this, ED_NOTIFICATION_ID, notificationIntent,
                     PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -914,9 +918,11 @@ public class threaded_application extends Application {
                 Activity runningActivity = runningActivityRef.get();
                 removeNotification((runningActivity != null) ? runningActivity.getIntent() : null);
 
-                if (wasInBackgroundWarningShownCount<3)  // limit the number of times this toast warning is shown
+                if ( (!inBackgroundForImageOrPermission) && (wasInBackgroundWarningShownCount<3) )  // limit the number of times this toast warning is shown
                     threaded_application.showCustomToast(runningActivity, getApplicationContext().getResources().getString(R.string.toastWasInBackgroundTitle), Toast.LENGTH_LONG,3);
                 wasInBackgroundWarningShownCount++;
+
+                inBackgroundForImageOrPermission = false;
             }
             runningActivityRef = new WeakReference<>(activity);                 // save most recently resumed activity
         }
