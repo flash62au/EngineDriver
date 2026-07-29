@@ -304,7 +304,7 @@ public class comm_handler extends Handler {
                commThread.sendEStopOneThrottle(whichThrottle);
                Bundle estopBundle = new Bundle();
                estopBundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
-               mainapp.alertActivitiesWithBundle(message_type.ESTOP, estopBundle);
+               mainapp.alertActivitiesWithBundle(message_type.ESTOP_ONE_THROTTLE, estopBundle);
             }
             break;
          }
@@ -621,6 +621,7 @@ public class comm_handler extends Handler {
 
          // Adjust the throttle's speed.
          case message_type.VELOCITY: {
+//            threaded_application.extendedLogging(activityName + ": handleMessage() : VELOCITY");
             if ((bundle != null)
                     && (bundle.containsKey(alert_bundle_tag_type.THROTTLE))
                     && (bundle.containsKey(alert_bundle_tag_type.SPEED)) ) {

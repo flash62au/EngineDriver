@@ -1496,8 +1496,9 @@ public class PreferencesActivity extends AppCompatActivity implements Preference
         boolean enable = ( (mainapp.isDccexProtocol())
                 || (mainapp.connectedHostName.isEmpty()) );
         enableDisablePreference(prefScreen, "prefDccexSwapThrowClose", enable);
-        enableDisablePreference(prefScreen, "prefDccexThrownLabel", enable);
-        enableDisablePreference(prefScreen, "prefDccexClosedLabel", enable);
+        showHideTurnoutThrowCoseLabelPreferences(prefScreen);
+//        enableDisablePreference(prefScreen, "prefDccexThrownLabel", enable);
+//        enableDisablePreference(prefScreen, "prefDccexClosedLabel", enable);
 
 //        enable = ( ((mainapp.isDccexProtocol()) && (mainapp.getDccexVersionNumeric() >= threaded_application.DCCEX_VERSION_MINIMUM_FOR_PAUSE_RESUME))
 //                || (mainapp.connectedHostName.isEmpty()));
@@ -1514,6 +1515,14 @@ public class PreferencesActivity extends AppCompatActivity implements Preference
         enable = ( (!mainapp.isDccexProtocol()) || (mainapp.connectedHostName.isEmpty()) );
         enableDisablePreference(prefScreen, "prefActionBarShowAdvancedConsistButton", enable);
         enableDisablePreference(prefScreen, "prefShowWitPom", enable);
+    }
+
+    private void showHideTurnoutThrowCoseLabelPreferences(PreferenceScreen prefScreen) {
+        boolean enable = ((mainapp.isDccexProtocol()) || (mainapp.connectedHostName.isEmpty()))
+                && (!prefs.getBoolean("prefTurnoutsShowThrowCloseButtons", getResources().getBoolean(R.bool.prefTurnoutsShowThrowCloseButtonsDefaultValue))) ;
+
+        enableDisablePreference(prefScreen, "prefDccexThrownLabel", enable);
+        enableDisablePreference(prefScreen, "prefDccexClosedLabel", enable);
     }
 
     private void showHideThrottleSwitchPreferences(PreferenceScreen prefScreen) {
@@ -1920,6 +1929,12 @@ public class PreferencesActivity extends AppCompatActivity implements Preference
 
                     case "prefStopButtonEStopOnLongPress":
                         parentActivity.showHideStopButtonPreferences(getPreferenceScreen());
+                        break;
+
+                    case "prefTurnoutsShowThrowCloseButtons":
+                    case "prefDccexThrownLabel":
+                    case "prefDccexClosedLabel":
+                        parentActivity.showHideTurnoutThrowCoseLabelPreferences(getPreferenceScreen());
                         break;
 
                 }

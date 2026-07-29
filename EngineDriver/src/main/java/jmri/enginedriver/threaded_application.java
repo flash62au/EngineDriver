@@ -439,7 +439,7 @@ public class threaded_application extends Application {
 
     public int whichThrottleLastTouch = 0; // needed in TA so that it can be used in the DCC-EX code
 
-    public boolean EStopActivated = false;  // Has EStop been sent?
+//    public boolean EStopActivated = false;  // Has EStop been sent?
 
     public int prefNumThrottles = 1;
     public int maxThrottles = 6;   // maximum number of throttles the system supports
@@ -1955,6 +1955,7 @@ public class threaded_application extends Application {
     }
 
     public void sendEStopMsg() {
+        threaded_application.extendedLogging(activityName + ":  sendEStopMsg()");
         if ( (mainapp.isDccexProtocol()) && (prefDccexEmergencyStopPauseResume) ) {
             if (mainapp.dccexEmergencyStopState == dccex_emergency_stop_state_type.RESUMED) {
                 mainapp.alertCommHandlerWithBundle(message_type.DCCEX_ESTOP_PAUSE);
@@ -1968,9 +1969,9 @@ public class threaded_application extends Application {
 
                     Bundle bundle = new Bundle();
                     bundle.putInt(alert_bundle_tag_type.THROTTLE, i);
-                    mainapp.alertCommHandlerWithBundle(message_type.ESTOP, bundle);
+                    mainapp.alertCommHandlerWithBundle(message_type.ESTOP_ONE_THROTTLE, bundle);
 
-                    EStopActivated = true;
+//                    EStopActivated = true;
                     threaded_application.extendedLogging(activityName + ":  sendEStopMsg(): EStop sent to server for throttle " + i);
                 }
             }
@@ -1978,13 +1979,14 @@ public class threaded_application extends Application {
     }
 
     public void sendEStopOneThrottleMsg(int whichThrottle) {
+//        threaded_application.extendedLogging(activityName + ":  sendEStopOneThrottleMsg(): " + whichThrottle);
         if (consists != null && consists[whichThrottle] != null && consists[whichThrottle].isActive()) {
 
             Bundle bundle = new Bundle();
             bundle.putInt(alert_bundle_tag_type.THROTTLE, whichThrottle);
             mainapp.alertCommHandlerWithBundle(message_type.ESTOP_ONE_THROTTLE, bundle);
 
-            EStopActivated = true;
+//            EStopActivated = true;
             threaded_application.logging(activityName + ": sendEStopOneThrottleMsg(): EStop sent to server for throttle " + whichThrottle);
         }
     }

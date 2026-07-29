@@ -775,12 +775,14 @@ public class comm_thread extends Thread {
 }
 
     protected static void sendSpeedZero(int whichThrottle) {
+//        threaded_application.extendedLogging(activityName + ": sendSpeedZero() : throttle: " + whichThrottle);
         sendSpeed(whichThrottle, 0);
     }
 
     // WiThrottle and DCC-EX
     @SuppressLint("DefaultLocale")
     protected static void sendSpeed(int whichThrottle, int speed) {
+//        threaded_application.extendedLogging(activityName + ": sendSpeed() : throttle: " + whichThrottle +  " speed: "  + speed);
         if (mainapp.isWiThrottleProtocol()) { // not DCC-EX
             SendProcessorWiThrottle.sendSpeed(whichThrottle, speed);
         } else { //DCC-EX
