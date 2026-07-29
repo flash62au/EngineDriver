@@ -5773,12 +5773,12 @@ public class throttle extends AppCompatActivity implements
         setLabels(); // handle labels and update view
         pauseResumeWebView();
 
-        if (mainapp.EStopActivated) {
-            speedUpdateAndNotify(0);  // update all three throttles
-            applySpeedRelatedOptions();  // update all three throttles
-
-            mainapp.EStopActivated = false;
-        }
+//        if (mainapp.EStopActivated) {
+//            speedUpdateAndNotify(0);  // update all three throttles
+//            applySpeedRelatedOptions();  // update all three throttles
+//
+//            mainapp.EStopActivated = false;
+//        }
 
         if (IS_ESU_MCII && isEsuMc2Stopped) {
             if (isEsuMc2AllStopped) {
