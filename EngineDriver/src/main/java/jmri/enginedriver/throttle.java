@@ -2088,18 +2088,24 @@ public class throttle extends AppCompatActivity implements
         int lastSpeed = throttle_slider.getProgress();
         int lastScaleSpeed = (int) Math.round(lastSpeed * displayUnitScale);
         int scaleSpeed = lastScaleSpeed + change;
+
         int speed = (int) Math.round(scaleSpeed / displayUnitScale);
         threaded_application.extendedLogging(activityName + ": speedChange():  change: " + change + " lastSpeed: " + lastSpeed+ " lastScaleSpeed: " + lastScaleSpeed + " scaleSpeed:" + scaleSpeed);
+
         if (lastScaleSpeed == scaleSpeed) {
             speed += (int) Math.signum(change);
         }
+
         if (speed < 0)  //insure speed is inside bounds
             speed = 0;
         if (speed > MAX_SPEED_VAL_WIT)
             speed = MAX_SPEED_VAL_WIT;
 
-        if (prefLimitSpeedButton && isLimitSpeeds[whichThrottle] && (speed > limitSpeedMax[whichThrottle])) {
-            speed = limitSpeedMax[whichThrottle];
+        if (prefLimitSpeedButton && isLimitSpeeds[whichThrottle]) {
+            int limitScaleSpeedMax = (int) (126 * ( (float) limitSpeedMax[whichThrottle]/100 * displayUnitScale));
+            if (scaleSpeed > limitScaleSpeedMax) {
+                speed =  (int) (126 * ((float) limitSpeedMax[whichThrottle]) / 100);
+            }
         }
 
         threaded_application.extendedLogging(activityName + ": speedChange():  change: " + change + " speed: " + speed+ " scaleSpeed: " + scaleSpeed);
