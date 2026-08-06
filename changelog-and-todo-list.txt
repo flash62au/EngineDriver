@@ -5,6 +5,7 @@
 * Bug Fixes
       * Enabling of the PROG type buttons would not work unless PROG was the last track.
       * Long Press ESTOP option would stop all throttles.
+      * Speed Step buttons did not work fully with the 'Limit Speed' button in the non-shunting/switching layouts.
 * Other
       * Disable the DCC-EX 'Set' button if no valid DC address entered. (for DC/DCX tracks)
       * Added Hint for the DC Address on the DCC-EX Track Manager page.
