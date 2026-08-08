@@ -772,6 +772,7 @@ public class ConnectionActivity extends AppCompatActivity implements Permissions
                 connected_hostname = (isDccEx ? "DCC-EX " : "") + ip;
                 connected_hostip = ip;
                 connected_port = Integer.parseInt(port);
+                connected_serviceType = isDccEx ? threaded_application.JMDNS_SERVICE_JMRI_DCCPP_OVERTCP : threaded_application.JMDNS_SERVICE_WITHROTTLE;
                 checkIfDccexServerName(connected_hostname, connected_port);
                 connect();
             }
