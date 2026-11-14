@@ -1713,6 +1713,15 @@
                     android:summary="@string/prefVolumeAccelerationPeriodSummary"
                     android:title="@string/prefVolumeAccelerationPeriodTitle" />
 
+                <EditTextPreference
+                    android:defaultValue="@string/prefVolumeDeadZoneSizeDefaultValue"
+                    android:dialogLayout="@layout/preference_dialog_layout_number_unsigned_integer_length_2"
+                    android:dialogTitle="@string/prefVolumeDeadZoneSizeTitle"
+                    android:key="prefVolumeDeadZoneSize"
+                    android:layout="@layout/preference_item_common_no_icon"
+                    android:summary="@string/prefVolumeDeadZoneSizeSummary"
+                    android:title="@string/prefVolumeDeadZoneSizeTitle" />
+
                 <SwitchPreferenceCompat
                     android:defaultValue="@bool/prefDisableVolumeKeysDefaultValue"
                     android:key="prefDisableVolumeKeys"

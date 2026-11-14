@@ -6,6 +6,7 @@
       * New keyboard commands for track power - normal - 'e' 'r', DCCEX tracks - 'y' 'k'
       * New keyboard commands for non-repeating speed changes - 'NumPad *' and 'NumPad /'
       * Added preference for the volume button presses to play sounds at maximum and zero speed
+      * For volume control, added a dead zone preference
 * Bug Fixes
 * Other
       * added 'NUCLEO' to the DCC-EX server types that show the 'Web' menu option

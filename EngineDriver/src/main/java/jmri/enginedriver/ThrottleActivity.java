@@ -370,6 +370,8 @@ public class ThrottleActivity extends AppCompatActivity implements
     protected int prefVolumeAccelerationMaximum = 1;
     protected int prefVolumeAccelerationPeriod = 100;
     protected boolean prefVolumeKeysSounds = true;
+    protected int prefVolumeDeadZoneSize = 0;
+    protected int volumeDeadZoneCurrentCount = 0;
     protected int prefGamePadSpeedButtonsSpeedStep = 4;
     protected boolean prefSpeedButtonsSpeedStepDecrement = false;
     protected boolean prefStopButtonEStopOnLongPress = false;
@@ -1722,6 +1724,7 @@ public class ThrottleActivity extends AppCompatActivity implements
         prefVolumeAccelerationMaximum = threaded_application.getIntPrefValue(prefs, "prefVolumeAccelerationMaximum", getApplicationContext().getResources().getString(R.string.prefVolumeAccelerationMaximumDefaultValue));
         prefVolumeAccelerationPeriod = threaded_application.getIntPrefValue(prefs, "prefVolumeAccelerationPeriod", getApplicationContext().getResources().getString(R.string.prefVolumeAccelerationPeriodDefaultValue));
         prefVolumeKeysSounds = prefs.getBoolean("prefVolumeKeysSounds", getResources().getBoolean(R.bool.prefVolumeKeysSoundsDefaultValue));
+        prefVolumeDeadZoneSize = threaded_application.getIntPrefValue(prefs, "prefVolumeDeadZoneSize", getApplicationContext().getResources().getString(R.string.prefVolumeDeadZoneSizeDefaultValue));
         prefGamePadSpeedButtonsSpeedStep = threaded_application.getIntPrefValue(prefs, "prefGamePadSpeedButtonsSpeedStep", getApplicationContext().getResources().getString(R.string.prefVolumeSpeedButtonsSpeedStepDefaultValue));
         prefSpeedButtonsSpeedStepDecrement = prefs.getBoolean("prefSpeedButtonsSpeedStepDecrement", getResources().getBoolean(R.bool.prefSpeedButtonsSpeedStepDecrementDefaultValue));
         prefStopButtonEStopOnLongPress = prefs.getBoolean("prefStopButtonEStopOnLongPress", getResources().getBoolean(R.bool.prefStopButtonEStopOnLongPressDefaultValue));
@@ -2098,6 +2101,37 @@ public class ThrottleActivity extends AppCompatActivity implements
         return (getSpeed(whichThrottle) <= getMinSpeed(whichThrottle));
     }
 
+
+    // find the projected speed, but don't actually change the speed
+    int getProjectedSpeedAfterSpeedChange(int whichThrottle, int change) {
+        SeekBar throttle_slider = getThrottleSlider(whichThrottle);
+        double displayUnitScale = getDisplayUnitScale(whichThrottle);
+        int lastSpeed = throttle_slider.getProgress();
+        int lastScaleSpeed = (int) Math.round(lastSpeed * displayUnitScale);
+        int scaleSpeed = lastScaleSpeed + change;
+
+        int speed = (int) Math.round(scaleSpeed / displayUnitScale);
+        threaded_application.extendedLogging(activityName + ": getProjectedSpeedAfterSpeedChange():  change: " + change + " lastSpeed: " + lastSpeed+ " lastScaleSpeed: " + lastScaleSpeed + " scaleSpeed:" + scaleSpeed);
+
+        if (lastScaleSpeed == scaleSpeed) {
+            speed += (int) Math.signum(change);
+        }
+
+        if (speed < 0)  //insure speed is inside bounds
+            speed = 0;
+        if (speed > MAX_SPEED_VAL_WIT)
+            speed = MAX_SPEED_VAL_WIT;
+
+        if (prefLimitSpeedButton && isLimitSpeeds[whichThrottle]) {
+            int limitScaleSpeedMax = (int) (126 * ( (float) limitSpeedMax[whichThrottle]/100 * displayUnitScale));
+            if (scaleSpeed > limitScaleSpeedMax) {
+                speed =  (int) (126 * ((float) limitSpeedMax[whichThrottle]) / 100);
+            }
+        }
+
+        return speed;
+    } // end getProjectedSpeedAfterSpeedChange
+
     // change speed slider by scaled display unit value
     int speedChange(int whichThrottle, int change) {
         SeekBar throttle_slider = getThrottleSlider(whichThrottle);
@@ -2242,18 +2276,36 @@ public class ThrottleActivity extends AppCompatActivity implements
 
             case speed_commands_from_type.VOLUME: {
                 vThrottleScreen.playSoundEffect(SoundEffectConstants.CLICK);  // make the click sound once
-                int speedChangeAmount = mainapp.getVolumeAcceleratedSpeedChange(prefVolumeSpeedButtonsSpeedStep);
+
+                int currentSpeed  = getSpeedFromCurrentSliderPosition(whichThrottle, true);
+                int speedChangeAmount = mainapp.getVolumeAcceleratedSpeedChange(prefVolumeSpeedButtonsSpeedStep) * -1;
+                int newSpeed = getProjectedSpeedAfterSpeedChange(whichThrottle, speedChangeAmount);
+
+                boolean inDeadZone = false;
+                if ( (prefVolumeDeadZoneSize>0) && (currentSpeed==0) ) {
+                    volumeDeadZoneCurrentCount--;
+                    if (volumeDeadZoneCurrentCount > (prefVolumeDeadZoneSize*-1)) // still in the dead zone
+                        inDeadZone = true;
+                } else {
+                    volumeDeadZoneCurrentCount = 0;
+                }
+
+                threaded_application.extendedLogging(activityName + ": decrementSpeed(): VOLUME: currentSpeed: " + currentSpeed+ " speedChangeAmount: " + speedChangeAmount + " newSpeed: "  + newSpeed + " volumeDeadZoneCurrentCount: " + volumeDeadZoneCurrentCount);
+
                 if (prefVolumeKeysSounds) {
-                    if (getSpeed(whichThrottle) - speedChangeAmount >= getMaxSpeed(whichThrottle)) {
+                    if (newSpeed >= getMaxSpeed(whichThrottle)) {
                         gamepadBeep(beep_type.NAK);
-                    } else if (getSpeed(whichThrottle) - speedChangeAmount <= 0) {
+                    } else if (newSpeed == 0) {
                         gamepadBeep(beep_type.ACK);
                     }
                 }
-                speedChangeAndNotify(whichThrottle, -speedChangeAmount);
+
+                if (!inDeadZone)
+                    speedChangeAndNotify(whichThrottle, speedChangeAmount);
                 mainapp.whichThrottleLastTouch = whichThrottle;
                 break;
             }
+
             case speed_commands_from_type.GAMEPAD:
                 speedChangeAndNotify(whichThrottle, -prefGamePadSpeedButtonsSpeedStep * stepMultiplier);
                 mainapp.whichThrottleLastTouch = whichThrottle;
@@ -2323,15 +2375,32 @@ public class ThrottleActivity extends AppCompatActivity implements
 
             case speed_commands_from_type.VOLUME: {
                 vThrottleScreen.playSoundEffect(SoundEffectConstants.CLICK);  // make the click sound once
+
+                int currentSpeed  = getSpeedFromCurrentSliderPosition(whichThrottle, true);
                 int speedChangeAmount = mainapp.getVolumeAcceleratedSpeedChange(prefVolumeSpeedButtonsSpeedStep);
+                int newSpeed = getProjectedSpeedAfterSpeedChange(whichThrottle, speedChangeAmount);
+
+                boolean inDeadZone = false;
+                if ( (prefVolumeDeadZoneSize>0) && (currentSpeed==0) ) {
+                    volumeDeadZoneCurrentCount++;
+                    if (volumeDeadZoneCurrentCount < prefVolumeDeadZoneSize) // still in the dead zone
+                        inDeadZone = true;
+                } else {
+                    volumeDeadZoneCurrentCount = 0;
+                }
+
+                threaded_application.extendedLogging(activityName + ": incrementSpeed(): VOLUME: currentSpeed: " + currentSpeed+ " speedChangeAmount: " + speedChangeAmount + " newSpeed: "  + newSpeed + " volumeDeadZoneCurrentCount: " + volumeDeadZoneCurrentCount);
+
                 if (prefVolumeKeysSounds) {
-                    if (getSpeed(whichThrottle) + speedChangeAmount >= getMaxSpeed(whichThrottle)) {
+                    if (newSpeed >= getMaxSpeed(whichThrottle)) {
                         gamepadBeep(beep_type.NAK);
-                    } else if (getSpeed(whichThrottle) + speedChangeAmount <= 0) {
+                    } else if (newSpeed == 0) {
                         gamepadBeep(beep_type.ACK);
                     }
                 }
-                speedChangeAndNotify(whichThrottle, speedChangeAmount);
+
+                if (!inDeadZone)
+                    speedChangeAndNotify(whichThrottle, speedChangeAmount);
                 mainapp.whichThrottleLastTouch = whichThrottle;
                 break;
             }
